@@ -128,8 +128,14 @@ func searchCommand() {
 func printCommand() {
     if checkDB() {
         if CommandLine.argc == 3 {
-            let path = CommandLine.arguments[2]
-            print("print all tags for PATH: \(path)")
+            let searchPath = CommandLine.arguments[2]
+            let genieTable = Table("genie")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
+            let query = genieTable.select(tag).filter(path == searchPath)
+            for item in try! db.prepare(query) {
+                print("\(item[tag])")
+            }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
