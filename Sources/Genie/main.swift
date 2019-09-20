@@ -22,12 +22,12 @@ import SQLite
 import Foundation
 import argtree
 
-let dbPath = "~/.geniedb"
+let dbPath = ".geniedb"
+let databaseFilePath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])/\(dbPath)"
 let genieVersion = "0.0.1"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
-var version = false
-var path: String
-var tag: String
+
+let db = try Connection(databaseFilePath)
 
 func printUsage() {
     let usageString =
@@ -65,6 +65,19 @@ func checkDB() -> Bool {
 
 func initializeDB() {
     // Create the SQLite db and structure it correctly
+    let genieTable = Table("genie")
+    let id = Expression<Int64>("id")
+    let path = Expression<String?>("path")
+    let tag = Expression<String>("tag")
+
+    guard let _ = try? db.run(genieTable.create { t in
+        t.column(id, primaryKey: true)
+        t.column(path)
+        t.column(tag)
+    }) else {
+        print("Error: Unable to initialize the SQLite table.")
+        return
+    }
 }
 
 func tagCommand() {
@@ -97,8 +110,14 @@ func searchCommand() {
     if checkDB() {
         // TODO: This should be able to search for paths that match a set of tags
         if CommandLine.argc == 3 {
-            let tag = CommandLine.arguments[2]
-            print("print all paths with TAG: \(tag)")
+            let searchTag = CommandLine.arguments[2]
+            let genieTable = Table("genie")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
+            let query = genieTable.select(path).filter(tag == searchTag)
+            for item in try! db.prepare(query) {
+                print("\(item[path]!)")
+            }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
@@ -125,6 +144,8 @@ case "-h",
 case "-v",
      "--version":
     print("\(commandName) \(genieVersion)")
+case "init":
+    initializeDB()
 case "t",
      "tag":
     tagCommand()
