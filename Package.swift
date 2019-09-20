@@ -4,20 +4,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "Genie",
+    name: "genie",
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.12.0")
+        .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.12.0"),
+        .package(url: "https://github.com/dastrobu/argtree.git", from: "1.5.2"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
-            name: "Genie",
-            dependencies: ["SQLite"]),
+            name: "genie",
+            dependencies: ["SQLite", "argtree"]),
         .testTarget(
-            name: "GenieTests",
-            dependencies: ["Genie"]),
+            name: "genieTests",
+            dependencies: ["genie"]),
     ]
 )

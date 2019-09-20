@@ -1,7 +1,7 @@
 import XCTest
 
-import GenieTests
+import genieTests
 
 var tests = [XCTestCaseEntry]()
-tests += GenieTests.allTests()
+tests += genieTests.allTests()
 XCTMain(tests)
