@@ -114,9 +114,14 @@ func tagCommand() {
 func removeCommand() {
     if checkDB() {
         if CommandLine.argc >= 4 {
-            let path = CommandLine.arguments[2]
-            let tag = CommandLine.arguments[3]
-            print("remove PATH: \(path) from TAG: \(tag)")
+            let pathToUntag = CommandLine.arguments[2]
+            let tagToRemove = CommandLine.arguments[3]
+            let genieTable = Table("genie")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
+            
+            let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
+            try! db.run(rowToDelete.delete())
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
