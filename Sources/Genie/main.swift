@@ -64,22 +64,26 @@ func checkDB() -> Bool {
 }
 
 func initializeDB() {
-    // Create the SQLite db and structure it correctly
-    let genieTable = Table("genie")
-    let id = Expression<Int64>("id")
-    let path = Expression<String?>("path")
-    let tag = Expression<String>("tag")
-    let timeCreated = Expression<String>("time_created")
-    
-    guard let _ = try? db.run(genieTable.create { t in
-        t.column(id, primaryKey: true)
-        t.column(path)
-        t.column(tag)
-        t.column(timeCreated)
-    }) else {
-        print("Error: Unable to initialize the SQLite table.")
-        return
+    let fileManager = FileManager.default
+    if fileManager.fileExists(atPath: databaseFilePath) {
+        //print("database file exists")
+    } else {
+        //print("database file doesnt exist. creating now")
+        // Create the SQLite db and structure it correctly
+        let genieTable = Table("genie")
+        let id = Expression<Int64>("id")
+        let path = Expression<String?>("path")
+        let tag = Expression<String>("tag")
+        let timeCreated = Expression<String>("time_created")
+        
+        try! db.run(genieTable.create { t in
+            t.column(id, primaryKey: true)
+            t.column(path)
+            t.column(tag)
+            t.column(timeCreated)
+        })
     }
+
 }
 
 func tagCommand() {
@@ -165,6 +169,8 @@ func printCommand() {
         }
     }
 }
+
+if CommandLine.argc == 1 { exit(0) }
 
 switch CommandLine.arguments[1] {
 case "-h",
