@@ -24,18 +24,98 @@ import argtree
 
 let dbPath = "~/.geniedb"
 let genieVersion = "0.0.1"
-
+let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var version = false
 var path: String
 var tag: String
 
 func printUsage() {
-    print("HELP DOC HERE")
+    let usageString =
+        """
+        \(commandName) \(genieVersion)
+        zach wick
+        filesystem tagger
+
+        USAGE:
+            genie [SUBCOMMAND]
+
+        FLAGS:
+            -h, --help       Prints help information
+            -V, --version    Prints version information
+
+        SUBCOMMANDS:
+            help      Prints this help message
+            rm        remove from the given PATH the given TAG
+            search    search for and return all PATHS that have TAG
+            show      show all tags applied to the given PATH
+            tag       tag the given PATH with the given TAG
+        """
+    print(usageString)
 }
 
 func unknownCommand() {
     print("Command \(CommandLine.arguments[1]) not found.")
     printUsage()
+}
+
+func checkDB() -> Bool {
+    // Connect to the SQLite db and ensure that it is structured correctly
+    return true
+}
+
+func initializeDB() {
+    // Create the SQLite db and structure it correctly
+}
+
+func tagCommand() {
+    if checkDB() {
+        if CommandLine.argc >= 4 {
+            let path = CommandLine.arguments[2]
+            let tag = CommandLine.arguments[3]
+            print("tag PATH: \(path) with TAG: \(tag)")
+        } else {
+            print("Error: Not enough arguments\n")
+            printUsage()
+        }
+    }
+}
+
+func removeCommand() {
+    if checkDB() {
+        if CommandLine.argc >= 4 {
+            let path = CommandLine.arguments[2]
+            let tag = CommandLine.arguments[3]
+            print("remove PATH: \(path) from TAG: \(tag)")
+        } else {
+            print("Error: Not enough arguments\n")
+            printUsage()
+        }
+    }
+}
+
+func searchCommand() {
+    if checkDB() {
+        // TODO: This should be able to search for paths that match a set of tags
+        if CommandLine.argc == 3 {
+            let tag = CommandLine.arguments[2]
+            print("print all paths with TAG: \(tag)")
+        } else {
+            print("Error: Not enough arguments\n")
+            printUsage()
+        }
+    }
+}
+
+func printCommand() {
+    if checkDB() {
+        if CommandLine.argc == 3 {
+            let path = CommandLine.arguments[2]
+            print("print all tags for PATH: \(path)")
+        } else {
+            print("Error: Not enough arguments\n")
+            printUsage()
+        }
+    }
 }
 
 switch CommandLine.arguments[1] {
@@ -44,19 +124,19 @@ case "-h",
     printUsage()
 case "-v",
      "--version":
-    print("\((CommandLine.arguments[0] as NSString).lastPathComponent) \(genieVersion)")
+    print("\(commandName) \(genieVersion)")
 case "t",
      "tag":
-    print("do tag command")
+    tagCommand()
 case "rm",
      "remove":
-    print("do remove command")
+    removeCommand()
 case "s",
      "search":
-    print("do search command")
+    searchCommand()
 case "p",
      "print":
-    print("do print/show command")
+    printCommand()
 default:
     unknownCommand()
 }
