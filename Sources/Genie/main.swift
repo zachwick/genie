@@ -58,15 +58,11 @@ func unknownCommand() {
     printUsage()
 }
 
-func checkDB() -> Bool {
-    // Connect to the SQLite db and ensure that it is structured correctly
-    return true
-}
-
-func initializeDB() {
+func checkDB() -> Bool  {
     let fileManager = FileManager.default
     if fileManager.fileExists(atPath: databaseFilePath) {
         //print("database file exists")
+        return true
     } else {
         //print("database file doesnt exist. creating now")
         // Create the SQLite db and structure it correctly
@@ -82,6 +78,7 @@ func initializeDB() {
             t.column(tag)
             t.column(timeCreated)
         })
+        return true
     }
 
 }
@@ -179,8 +176,6 @@ case "-h",
 case "-v",
      "--version":
     print("\(commandName) \(genieVersion)")
-case "init":
-    initializeDB()
 case "t",
      "tag":
     tagCommand()
