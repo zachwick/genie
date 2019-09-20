@@ -23,27 +23,34 @@ import Foundation
 import argtree
 
 let dbPath = "~/.geniedb"
+let genieVersion = "0.0.1"
 
-// global modal for the application
-var verbose = false
+var version = false
+var path: String
+var tag: String
+
+let globalVarArgs = VarArgs()
+let tagVarArgs = VarArgs()
+
+let versionFlag = Flag(longName: "version", shortName: "v", description: "Prints version information") { _ in
+  version = true
+}
+
+let tagCommand = Command(name: "tag", parsers: [tagVarArgs]) { vars in
+    //print("will tag \(path) with tag \(tag)")
+    print("\(vars)")
+}
 
 try! ArgTree(description:
 """
-usage: \(CommandLine.arguments[0])) [flags...]
 
-hello world demo
+USAGE: \((CommandLine.arguments[0] as NSString).lastPathComponent) [SUBCOMMAND]
 
-flags:
+FLAGS:
 """,
-    parsers: [
-        Flag(longName: "verbose", shortName: "v", description: "print verbose output") { _ in
-            verbose = true
-        }
-    ]).parse()
-    
+    parsers: [versionFlag, tagCommand, globalVarArgs]
+).parse()
 // here comes the real program code after parsing the command line arguments
-if verbose {
-    print("SQLite DB at: \(dbPath)")
-} else {
-    print("\(dbPath)")
+if version {
+    print("\((CommandLine.arguments[0] as NSString).lastPathComponent) \(genieVersion)")
 }
