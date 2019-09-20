@@ -69,11 +69,13 @@ func initializeDB() {
     let id = Expression<Int64>("id")
     let path = Expression<String?>("path")
     let tag = Expression<String>("tag")
-
+    let timeCreated = Expression<String>("time_created")
+    
     guard let _ = try? db.run(genieTable.create { t in
         t.column(id, primaryKey: true)
         t.column(path)
         t.column(tag)
+        t.column(timeCreated)
     }) else {
         print("Error: Unable to initialize the SQLite table.")
         return
@@ -83,9 +85,25 @@ func initializeDB() {
 func tagCommand() {
     if checkDB() {
         if CommandLine.argc >= 4 {
-            let path = CommandLine.arguments[2]
-            let tag = CommandLine.arguments[3]
-            print("tag PATH: \(path) with TAG: \(tag)")
+            var pathToTag = CommandLine.arguments[2]
+            let tagToUse = CommandLine.arguments[3]
+            
+            let dirURL = URL(fileURLWithPath: pathToTag)
+            let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
+            pathToTag = "\(dirURL.absoluteString[index...])"
+
+            let genieTable = Table("genie")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
+            let timeCreated = Expression<String>("time_created")
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd h:mm a Z"
+            let now = dateFormatter.string(from: Date())
+            
+            let insert = genieTable.insert(path <- pathToTag,
+                                           tag <- tagToUse,
+                                           timeCreated <- now)
+            let _ = try! db.run(insert)
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
