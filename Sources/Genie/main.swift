@@ -29,28 +29,34 @@ var version = false
 var path: String
 var tag: String
 
-let globalVarArgs = VarArgs()
-let tagVarArgs = VarArgs()
-
-let versionFlag = Flag(longName: "version", shortName: "v", description: "Prints version information") { _ in
-  version = true
+func printUsage() {
+    print("HELP DOC HERE")
 }
 
-let tagCommand = Command(name: "tag", parsers: [tagVarArgs]) { vars in
-    //print("will tag \(path) with tag \(tag)")
-    print("\(vars)")
+func unknownCommand() {
+    print("Command \(CommandLine.arguments[1]) not found.")
+    printUsage()
 }
 
-try! ArgTree(description:
-"""
-
-USAGE: \((CommandLine.arguments[0] as NSString).lastPathComponent) [SUBCOMMAND]
-
-FLAGS:
-""",
-    parsers: [versionFlag, tagCommand, globalVarArgs]
-).parse()
-// here comes the real program code after parsing the command line arguments
-if version {
+switch CommandLine.arguments[1] {
+case "-h",
+     "--help":
+    printUsage()
+case "-v",
+     "--version":
     print("\((CommandLine.arguments[0] as NSString).lastPathComponent) \(genieVersion)")
+case "t",
+     "tag":
+    print("do tag command")
+case "rm",
+     "remove":
+    print("do remove command")
+case "s",
+     "search":
+    print("do search command")
+case "p",
+     "print":
+    print("do print/show command")
+default:
+    unknownCommand()
 }
