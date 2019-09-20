@@ -3,7 +3,7 @@
 * Initial launch of genie
 * Implements basic 'tag', 'rm', 'search', and 'show' commands
 
-### 2.0.0 2019-09-19
+### 0.0.1 2019-09-19
 
 * Re-implement genie in Swift 5
 
