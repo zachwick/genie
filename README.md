@@ -1,5 +1,7 @@
 # Genie
 
+[![Build Status](https://travis-ci.com/zachwick/genie.svg?branch=master)](https://travis-ci.com/zachwick/genie)
+
 genie - a tool for tagging arbitrary file paths with arbitarty tags
 
 ## Installation
