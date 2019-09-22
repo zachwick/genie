@@ -108,7 +108,7 @@ func tagCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
-        
+        }
     }
 }
 
