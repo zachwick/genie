@@ -108,15 +108,20 @@ func tagCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
-        }
+        
     }
 }
 
 func removeCommand() {
     if checkDB() {
         if CommandLine.argc >= 4 {
-            let pathToUntag = CommandLine.arguments[2]
+            var pathToUntag = CommandLine.arguments[2]
             let tagToRemove = CommandLine.arguments[3]
+            
+            let dirURL = URL(fileURLWithPath: pathToUntag)
+            let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
+            pathToUntag = "\(dirURL.absoluteString[index...])"
+            
             let genieTable = Table("genie")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
@@ -152,8 +157,13 @@ func searchCommand() {
 func printCommand() {
     if checkDB() {
         if CommandLine.argc == 3 {
-            let searchPath = CommandLine.arguments[2]
+            var searchPath = CommandLine.arguments[2]
             let genieTable = Table("genie")
+            
+            let dirURL = URL(fileURLWithPath: searchPath)
+            let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
+            searchPath = "\(dirURL.absoluteString[index...])"
+            
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let query = genieTable.select(tag).filter(path == searchPath)
