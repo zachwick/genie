@@ -43,11 +43,11 @@ func printUsage() {
             -V, --version    Prints version information
 
         SUBCOMMANDS:
-            help      Prints this help message
-            rm        remove from the given PATH the given TAG
-            search    search for and return all PATHS that have TAG
-            show      show all tags applied to the given PATH
-            tag       tag the given PATH with the given TAG
+            help       Prints this help message
+            rm         remove from the given PATH the given TAG
+            search (s) search for and return all PATHS that have TAG
+            print  (p) show all tags applied to the given PATH
+            tag    (t) tag the given PATH with the given TAG
         """
     print(usageString)
 }
@@ -69,12 +69,14 @@ func checkDB() -> Bool  {
         db = try! Connection(databaseFilePath)
         let genieTable = Table("genie")
         let id = Expression<Int64>("id")
+        let host = Expression<String>("host")
         let path = Expression<String?>("path")
         let tag = Expression<String>("tag")
         let timeCreated = Expression<String>("time_created")
         
         try! db!.run(genieTable.create { t in
             t.column(id, primaryKey: true)
+            t.column(host)
             t.column(path)
             t.column(tag)
             t.column(timeCreated)
@@ -94,7 +96,10 @@ func tagCommand() {
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
             pathToTag = "\(dirURL.absoluteString[index...])"
 
+            let hostName = Host.current().localizedName ?? ""
+            
             let genieTable = Table("genie")
+            let host = Expression<String>("host")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let timeCreated = Expression<String>("time_created")
@@ -102,7 +107,8 @@ func tagCommand() {
             dateFormatter.dateFormat = "yyyy-MM-dd h:mm a Z"
             let now = dateFormatter.string(from: Date())
             
-            let insert = genieTable.insert(path <- pathToTag,
+            let insert = genieTable.insert(host <- hostName,
+                                           path <- pathToTag,
                                            tag <- tagToUse,
                                            timeCreated <- now)
             let _ = try! db!.run(insert)
@@ -142,11 +148,12 @@ func searchCommand() {
         if CommandLine.argc == 3 {
             let searchTag = CommandLine.arguments[2]
             let genieTable = Table("genie")
+            let host = Expression<String?>("host")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
-            let query = genieTable.select(path).filter(tag == searchTag)
+            let query = genieTable.select(path, host).filter(tag == searchTag)
             for item in try! db!.prepare(query) {
-                print("\(item[path]!)")
+                print("\(item[host]!): \(item[path]!)")
             }
         } else {
             print("Error: Not enough arguments\n")
