@@ -26,8 +26,7 @@ let dbPath = ".geniedb"
 let databaseFilePath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])/\(dbPath)"
 let genieVersion = "0.0.1"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
-
-let db = try Connection(databaseFilePath)
+var db: Connection?
 
 func printUsage() {
     let usageString =
@@ -61,18 +60,20 @@ func unknownCommand() {
 func checkDB() -> Bool  {
     let fileManager = FileManager.default
     if fileManager.fileExists(atPath: databaseFilePath) {
-        //print("database file exists")
+        // This call to `Connection` will createthe database file if it is not already present at the given filepath
+        db = try! Connection(databaseFilePath)
         return true
     } else {
-        //print("database file doesnt exist. creating now")
         // Create the SQLite db and structure it correctly
+        // This call to `Connection` will createthe database file if it is not already present at the given filepath
+        db = try! Connection(databaseFilePath)
         let genieTable = Table("genie")
         let id = Expression<Int64>("id")
         let path = Expression<String?>("path")
         let tag = Expression<String>("tag")
         let timeCreated = Expression<String>("time_created")
         
-        try! db.run(genieTable.create { t in
+        try! db!.run(genieTable.create { t in
             t.column(id, primaryKey: true)
             t.column(path)
             t.column(tag)
@@ -104,7 +105,7 @@ func tagCommand() {
             let insert = genieTable.insert(path <- pathToTag,
                                            tag <- tagToUse,
                                            timeCreated <- now)
-            let _ = try! db.run(insert)
+            let _ = try! db!.run(insert)
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
@@ -127,7 +128,7 @@ func removeCommand() {
             let tag = Expression<String>("tag")
             
             let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
-            try! db.run(rowToDelete.delete())
+            try! db!.run(rowToDelete.delete())
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
@@ -144,7 +145,7 @@ func searchCommand() {
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let query = genieTable.select(path).filter(tag == searchTag)
-            for item in try! db.prepare(query) {
+            for item in try! db!.prepare(query) {
                 print("\(item[path]!)")
             }
         } else {
@@ -167,7 +168,7 @@ func printCommand() {
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let query = genieTable.select(tag).filter(path == searchPath)
-            for item in try! db.prepare(query) {
+            for item in try! db!.prepare(query) {
                 print("\(item[tag])")
             }
         } else {
