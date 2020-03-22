@@ -27,6 +27,7 @@ let databaseFilePath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory
 let genieVersion = "0.0.1"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var db: Connection?
+var jsonOutput = false
 
 func printUsage() {
     let usageString =
@@ -41,6 +42,7 @@ func printUsage() {
         FLAGS:
             -h, --help       Prints help information
             -V, --version    Prints version information
+            -j, --json       Gives output as json string
 
         SUBCOMMANDS:
             help       Prints this help message
@@ -145,15 +147,46 @@ func removeCommand() {
 func searchCommand() {
     if checkDB() {
         // TODO: This should be able to search for paths that match a set of tags
-        if CommandLine.argc == 3 {
+        // The second part of this if clause is because if the user passes the --json
+        // flag, then CommandLine.argc is 4
+        if CommandLine.argc == 3 || (CommandLine.argc == 4 && jsonOutput) {
             let searchTag = CommandLine.arguments[2]
             let genieTable = Table("genie")
             let host = Expression<String?>("host")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let query = genieTable.select(path, host).filter(tag == searchTag)
+            var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
+            var items: [Dictionary<String, String>] = []
+
             for item in try! db!.prepare(query) {
-                print("\(item[host]!): \(item[path]!)")
+                if jsonOutput {
+                    //print("\(item[host]!): \(item[path]!)")
+                    // title
+                    // subtitle
+                    // arg
+                    // autocomplete
+                    // quicklookurl
+                    let result: Dictionary<String, String> = [
+                        "title": item[path]!,
+                        "subtitle": item[path]!,
+                        "arg": item[path]!,
+                        "autocomplete": item[path]!,
+                        "quicklookurl": item[path]!
+                    ]
+                    items.append(result)
+                } else {
+                    print("\(item[host]!): \(item[path]!)")
+                }
+            }
+            if jsonOutput {
+                let encoder = JSONEncoder()
+                outputArray["items"] = items
+                if let jsonData = try? encoder.encode(outputArray) {
+                    if let jsonString = String(data: jsonData, encoding: .utf8) {
+                        print(jsonString)
+                    }
+                }
             }
         } else {
             print("Error: Not enough arguments\n")
@@ -164,7 +197,9 @@ func searchCommand() {
 
 func printCommand() {
     if checkDB() {
-        if CommandLine.argc == 3 {
+        // The second part of this if clause is because if the user passes the --json
+        // flag, then CommandLine.argc is 4
+        if CommandLine.argc == 3 || (CommandLine.argc == 4 && jsonOutput) {
             var searchPath = CommandLine.arguments[2]
             let genieTable = Table("genie")
             
@@ -186,6 +221,16 @@ func printCommand() {
 }
 
 if CommandLine.argc == 1 { exit(0) }
+
+if CommandLine.arguments.contains("-j") || CommandLine.arguments.contains("--json") {
+    jsonOutput = true
+    if let index = CommandLine.arguments.firstIndex(of: "-j") {
+        CommandLine.arguments.remove(at: index)
+    }
+    if let index = CommandLine.arguments.firstIndex(of: "--json") {
+        CommandLine.arguments.remove(at: index)
+    }
+}
 
 switch CommandLine.arguments[1] {
 case "-h",
