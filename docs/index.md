@@ -24,7 +24,7 @@ Use `genie --help` to see usage instructions
 | -- | -- | -- |
 | `-h` | `--help` | Prints help information |
 | `-v` | `--version` | Prints version information |
-| `-j` | `--json` | Gives output as json string |
+| `-j` | `--json` | Gives output as json string for use in Alfred |
 
 ### Subcommands
 

@@ -42,7 +42,7 @@ func printUsage() {
         FLAGS:
             -h, --help       Prints help information
             -v, --version    Prints version information
-            -j, --json       Gives output as json string
+            -j, --json       Gives output as json string for use in Alfred
 
         SUBCOMMANDS:
             help       Prints this help message
@@ -90,7 +90,9 @@ func checkDB() -> Bool  {
 
 func tagCommand() {
     if checkDB() {
-        if CommandLine.argc >= 4 {
+        // The second part of this if clause is because if the user passes the --json
+        // flag (which is ignored by this command), then CommandLine.argc is 5
+        if CommandLine.argc == 4 || (CommandLine.argc == 5 && jsonOutput) {
             var pathToTag = CommandLine.arguments[2]
             let tagToUse = CommandLine.arguments[3]
             
@@ -123,7 +125,9 @@ func tagCommand() {
 
 func removeCommand() {
     if checkDB() {
-        if CommandLine.argc >= 4 {
+        // The second part of this if clause is because if the user passes the --json
+        // flag (which is ignored by this command), then CommandLine.argc is 5
+        if CommandLine.argc == 4 || (CommandLine.argc == 5 && jsonOutput) {
             var pathToUntag = CommandLine.arguments[2]
             let tagToRemove = CommandLine.arguments[3]
             
@@ -199,7 +203,7 @@ func searchCommand() {
 func printCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
-        // flag, then CommandLine.argc is 4
+        // flag (which is ignored by this command), then CommandLine.argc is 4
         if CommandLine.argc == 3 || (CommandLine.argc == 4 && jsonOutput) {
             var searchPath = CommandLine.arguments[2]
             let genieTable = Table("genie")
@@ -221,8 +225,6 @@ func printCommand() {
     }
 }
 
-if CommandLine.argc == 1 { exit(0) }
-
 if CommandLine.arguments.contains("-j") || CommandLine.arguments.contains("--json") {
     jsonOutput = true
     if let index = CommandLine.arguments.firstIndex(of: "-j") {
@@ -231,6 +233,11 @@ if CommandLine.arguments.contains("-j") || CommandLine.arguments.contains("--jso
     if let index = CommandLine.arguments.firstIndex(of: "--json") {
         CommandLine.arguments.remove(at: index)
     }
+}
+
+if CommandLine.argc == 1  || (CommandLine.argc == 2 && jsonOutput) {
+    print("Error: Not enough arguments\n")
+    printUsage()
 }
 
 switch CommandLine.arguments[1] {
