@@ -7,8 +7,10 @@ genie - a tool for tagging arbitrary file paths with arbitrary tags
 ## Installation
 
 1. Clone the project
-2. Build with `swift build`
-3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable.
+2. Build with `swift build -c release` (or `swift build` to build a debug version)
+3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable. This usually looks something like
+
+    cp ./.build/x86_64-apple-macosx/release/genie /usr/local/bin
 
 ## Usage
 
