@@ -4,18 +4,4 @@
 
 genie - a tool for tagging arbitrary file paths with arbitarty tags
 
-## Installation
-
-1. Clone the project
-2. Build with `swift build`
-3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable.
-
-## Usage
-
-Use `genie --help` to see usage instructions
-
-## License
-
-genie is copyright 2017, 2018, 2019, 2020 zach wick <zach@zachwick.com> and is licensed
-under the GNU GPLv3 or later. You can find a copy of the GNU GPLv3
-included in the project as the file named `License`.
+Instructions for installation and use can be found in the [docs](https://zachwick.github.io/genie/)

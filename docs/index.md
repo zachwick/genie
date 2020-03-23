@@ -14,6 +14,28 @@ genie - a tool for tagging arbitrary file paths with arbitarty tags
 
 Use `genie --help` to see usage instructions
 
+### Invocation
+
+`genie [SUBCOMMAND]`
+
+### Flags
+
+| short flag | long flag | description |
+| -- | -- | -- |
+| `-h` | `--help` | Prints help information |
+| `-v` | `--version` | Prints version information |
+| `-j` | `--json` | Gives output as json string |
+
+### Subcommands
+
+| command | short version | description |
+| -- | -- | -- |
+| `help` | n/a | Prints this help message |
+| `rm [PATH] [TAG]` | n/a | remove from the given `PATH` the given `TAG` |
+| `search [TAG]` | `s` | search for and return all paths that have `TAG` |
+| `print [PATH]` | `p` | show all tags applied to the given `PATH` |
+| `tag [PATH] [TAG]` | `t` | tag the given `PATH` with the given `TAG` |
+
 ## License
 
 genie is copyright 2017, 2018, 2019, 2020 zach wick <zach@zachwick.com> and is licensed

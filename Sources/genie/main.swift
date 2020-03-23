@@ -41,7 +41,7 @@ func printUsage() {
 
         FLAGS:
             -h, --help       Prints help information
-            -V, --version    Prints version information
+            -v, --version    Prints version information
             -j, --json       Gives output as json string
 
         SUBCOMMANDS:
