@@ -172,7 +172,8 @@ func searchCommand() {
                         "subtitle": item[path]!,
                         "arg": item[path]!,
                         "autocomplete": item[path]!,
-                        "quicklookurl": item[path]!
+                        "quicklookurl": item[path]!,
+                        "type": "file"
                     ]
                     items.append(result)
                 } else {
