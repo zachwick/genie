@@ -49,7 +49,7 @@ func printUsage() {
         SUBCOMMANDS:
             help       Prints this help message
             rm         remove from the given PATH the given TAG
-            search (s) search for and return all PATHS that have TAG
+            search (s) search for and return all PATHS that have all of the given TAGs
             print  (p) show all tags applied to the given PATH
             tag    (t) tag the given PATH with the given TAG
         """

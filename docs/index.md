@@ -37,7 +37,7 @@ Use `genie --help` to see usage instructions
 | -- | -- | -- |
 | `help` | n/a | Prints this help message |
 | `rm [PATH] [TAG]` | n/a | remove from the given `PATH` the given `TAG` |
-| `search [TAG] [FLAG]` | `s` | search for and return all paths that have `TAG` |
+| `search [TAGLIST] [FLAG]` | `s` | search for and return all paths that have _all_ of the tags given in `TAGLIST` |
 | `print [PATH]` | `p` | show all tags applied to the given `PATH` |
 | `tag [PATH] [TAG] [FLAG]` | `t` | tag the given `PATH` with the given `TAG`, or print a list of all tags used. |
 
