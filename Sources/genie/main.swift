@@ -24,7 +24,7 @@ import argtree
 
 let dbPath = ".geniedb"
 let databaseFilePath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])/\(dbPath)"
-let genieVersion = "0.0.1"
+let genieVersion = "1.1.0"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var db: Connection?
 var jsonOutput = false
