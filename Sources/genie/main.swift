@@ -171,7 +171,7 @@ func searchCommand() {
         // TODO: This should be able to search for paths that match a set of tags
         // The second part of this if clause is because if the user passes the --json
         // flag, then CommandLine.argc is 4
-        if CommandLine.argc == 3 || (CommandLine.argc == 4 && (jsonOutput || tagList)) {
+        if CommandLine.argc >= 3 || (CommandLine.argc >= 4 && (jsonOutput || tagList)) {
             let searchTag = CommandLine.arguments[2]
             let genieTable = Table("genie")
             let host = Expression<String?>("host")
