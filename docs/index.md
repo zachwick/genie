@@ -10,7 +10,9 @@ genie - a tool for tagging arbitrary file paths with arbitrary tags
 2. Build with `swift build -c release` (or `swift build` to build a debug version)
 3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable. This usually looks something like
 
-> cp ./.build/x86_64-apple-macosx/release/genie /usr/local/bin
+```
+cp ./.build/x86_64-apple-macosx/release/genie /usr/local/bin
+```
 
 ## CLI Usage
 
@@ -67,8 +69,10 @@ On macOS, genie uses `~/Documents/.geniedb` as the location of its backing sqlit
 
 If you are feeling adventurous, after you've invoked `genie` at least once to create the file and needed tables, you can move that sqlite document to any location and symlink it back to the original path of `~/Documents/.geniedb`. As an illustrative example, after you've invoked `genie` at least once, you can do something like
 
-> mv ~/Documents/.geniedb ~/Dropbox/geniedb
-> ln -s ~/Dropbox/geniedb ~/Documents/.geniedb
+```
+mv ~/Documents/.geniedb ~/Dropbox/geniedb
+ln -s ~/Dropbox/geniedb ~/Documents/.geniedb
+```
 
 Once you've done this, genie will traverse the symlink and the backing store for genie can be synced and shared across multiple machines. This means that when using the `search` command, the returned paths may not live locally on the machine that you're invoking `genie` from. You will need to pay attention to the indicated host and then locate the file on the corresponding machine in order to interact with it.
 
