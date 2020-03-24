@@ -12,7 +12,7 @@ genie - a tool for tagging arbitrary file paths with arbitrary tags
 
     cp ./.build/x86_64-apple-macosx/release/genie /usr/local/bin
 
-## Usage
+## CLI Usage
 
 Use `genie --help` to see usage instructions
 
@@ -37,6 +37,29 @@ Use `genie --help` to see usage instructions
 | `search [TAG]` | `s` | search for and return all paths that have `TAG` |
 | `print [PATH]` | `p` | show all tags applied to the given `PATH` |
 | `tag [PATH] [TAG]` | `t` | tag the given `PATH` with the given `TAG` |
+
+## Alfred Usage
+
+Once you've started tagging your filepaths with meaningful tags, you may find yourself wanting to quickly find and action a particular filepath. One way to do this is using the `search` command in a terminal. A more graphical way is to use [Alfred](https://www.alfredapp.com).
+
+### Installing the Alfred Workflow
+
+In order to use genie's `search` command from within Alfred, you must first install the Genie Workflow for Alfred.
+
+0. Install [Alfred](https://www.alfredapp.com)
+1. Download the [Genie Workflow](https://github.com/zachwick/genie/raw/master/Genie.alfredworkflow)
+2. Double-click on the downloaded file in Finder
+3. Follow the on-screen instructions to install the workflow into Alfred
+
+### Using the Alfred Workflow
+
+While you _can_ use the Alfred workflow with the `tag`, `rm`, and `print` genie commands, it is most useful when used with the `search` command. To use the workflow to search for all filepaths with a given tag
+
+1. Invoke your configured Alfred hotkey(s)
+2. type `g search TAG` (or `g s TAG`) replacing `TAG` with the tag that you would like to search for
+3. Select the filepath that you're interested in, and action it as desired.
+
+Some common actions include quicklooking the file with either the `shift` key or `cmd + y`. Once you're quicklooking a filepath, Quick Look often has additional actions that you can take such as opening a file in a particular application.
 
 ## License
 
