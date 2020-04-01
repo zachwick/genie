@@ -28,6 +28,7 @@ let genieVersion = "1.1.0"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var db: Connection?
 var jsonOutput = false
+var tagList = false
 
 func printUsage() {
     let usageString =
@@ -42,7 +43,8 @@ func printUsage() {
         FLAGS:
             -h, --help       Prints help information
             -v, --version    Prints version information
-            -j, --json       Gives output as json string for use in Alfred
+            -j, --json       Gives output as json string for use in Alfred (only used by the 'search' subcommand)
+            -l, --list       Prints out a listing of all tags used in genie (only used by the 'tag' subcommand)
 
         SUBCOMMANDS:
             help       Prints this help message
@@ -92,7 +94,7 @@ func tagCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
-        if CommandLine.argc == 4 || (CommandLine.argc == 5 && jsonOutput) {
+        if CommandLine.argc == 4 || (CommandLine.argc == 5 && (jsonOutput || tagList)) {
             var pathToTag = CommandLine.arguments[2]
             let tagToUse = CommandLine.arguments[3]
             
@@ -123,11 +125,27 @@ func tagCommand() {
     }
 }
 
+func listTagsCommand() {
+    // Fetch all distinct tags from the db and print them out
+    if checkDB() {
+        if CommandLine.argc == 3 {
+            let genieTable = Table("genie")
+            let tag = Expression<String>("tag")
+            let query = genieTable.select(distinct: tag)
+
+            for item in try! db!.prepare(query) {
+                print("\(item[tag])")
+            }
+
+        }
+    }
+}
+
 func removeCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
-        if CommandLine.argc == 4 || (CommandLine.argc == 5 && jsonOutput) {
+        if CommandLine.argc == 4 || (CommandLine.argc == 5 && (jsonOutput || tagList)) {
             var pathToUntag = CommandLine.arguments[2]
             let tagToRemove = CommandLine.arguments[3]
             
@@ -153,7 +171,7 @@ func searchCommand() {
         // TODO: This should be able to search for paths that match a set of tags
         // The second part of this if clause is because if the user passes the --json
         // flag, then CommandLine.argc is 4
-        if CommandLine.argc == 3 || (CommandLine.argc == 4 && jsonOutput) {
+        if CommandLine.argc == 3 || (CommandLine.argc == 4 && (jsonOutput || tagList)) {
             let searchTag = CommandLine.arguments[2]
             let genieTable = Table("genie")
             let host = Expression<String?>("host")
@@ -165,12 +183,6 @@ func searchCommand() {
 
             for item in try! db!.prepare(query) {
                 if jsonOutput {
-                    //print("\(item[host]!): \(item[path]!)")
-                    // title
-                    // subtitle
-                    // arg
-                    // autocomplete
-                    // quicklookurl
                     let result: Dictionary<String, String> = [
                         "title": item[path]!,
                         "subtitle": item[path]!,
@@ -204,7 +216,7 @@ func printCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 4
-        if CommandLine.argc == 3 || (CommandLine.argc == 4 && jsonOutput) {
+        if CommandLine.argc == 3 || (CommandLine.argc == 4 && (jsonOutput || tagList)) {
             var searchPath = CommandLine.arguments[2]
             let genieTable = Table("genie")
             
@@ -235,6 +247,16 @@ if CommandLine.arguments.contains("-j") || CommandLine.arguments.contains("--jso
     }
 }
 
+if CommandLine.arguments.contains("-l") || CommandLine.arguments.contains("--list") {
+    tagList = true
+    if let index = CommandLine.arguments.firstIndex(of: "-l") {
+        CommandLine.arguments.remove(at: index)
+    }
+    if let index = CommandLine.arguments.firstIndex(of: "--list") {
+        CommandLine.arguments.remove(at: index)
+    }
+}
+
 if CommandLine.argc == 1  || (CommandLine.argc == 2 && jsonOutput) {
     print("Error: Not enough arguments\n")
     printUsage()
@@ -249,7 +271,11 @@ case "-v",
     print("\(commandName) \(genieVersion)")
 case "t",
      "tag":
-    tagCommand()
+    if tagList {
+        listTagsCommand()
+    } else {
+        tagCommand()
+    }
 case "rm",
      "remove":
     removeCommand()
