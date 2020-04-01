@@ -28,7 +28,8 @@ Use `genie --help` to see usage instructions
 | -- | -- | -- |
 | `-h` | `--help` | Prints help information |
 | `-v` | `--version` | Prints version information |
-| `-j` | `--json` | Gives output as json string for use in Alfred |
+| `-j` | `--json` | Gives output as json string for use in Alfred (only used by the `search` subcommand) |
+| `-l` | `--list` | Prints out a listing of all tags used in genie (only used by the `tag` subcommand) |
 
 ### Subcommands
 
@@ -36,9 +37,9 @@ Use `genie --help` to see usage instructions
 | -- | -- | -- |
 | `help` | n/a | Prints this help message |
 | `rm [PATH] [TAG]` | n/a | remove from the given `PATH` the given `TAG` |
-| `search [TAG]` | `s` | search for and return all paths that have `TAG` |
+| `search [TAG] [FLAG]` | `s` | search for and return all paths that have `TAG` |
 | `print [PATH]` | `p` | show all tags applied to the given `PATH` |
-| `tag [PATH] [TAG]` | `t` | tag the given `PATH` with the given `TAG` |
+| `tag [PATH] [TAG] [FLAG]` | `t` | tag the given `PATH` with the given `TAG`, or print a list of all tags used. |
 
 ## Alfred Usage
 

@@ -43,7 +43,8 @@ func printUsage() {
         FLAGS:
             -h, --help       Prints help information
             -v, --version    Prints version information
-            -j, --json       Gives output as json string for use in Alfred
+            -j, --json       Gives output as json string for use in Alfred (only used by the 'search' subcommand)
+            -l, --list       Prints out a listing of all tags used in genie (only used by the 'tag' subcommand)
 
         SUBCOMMANDS:
             help       Prints this help message
