@@ -49,7 +49,7 @@ func printUsage() {
         SUBCOMMANDS:
             help       Prints this help message
             rm         remove from the given PATH the given TAG
-            search (s) search for and return all PATHS that have TAG
+            search (s) search for and return all PATHS that have all of the given TAGs
             print  (p) show all tags applied to the given PATH
             tag    (t) tag the given PATH with the given TAG
         """
@@ -168,16 +168,15 @@ func removeCommand() {
 
 func searchCommand() {
     if checkDB() {
-        // TODO: This should be able to search for paths that match a set of tags
-        // The second part of this if clause is because if the user passes the --json
-        // flag, then CommandLine.argc is 4
-        if CommandLine.argc == 3 || (CommandLine.argc == 4 && (jsonOutput || tagList)) {
-            let searchTag = CommandLine.arguments[2]
+        // The second part of this if clause is because if the user passes either of
+        //the --json or --list flags, then CommandLine.argc is at least 4
+        if CommandLine.argc >= 3 || (CommandLine.argc >= 4 && (jsonOutput || tagList)) {
+            let searchTags: Array<String> = Array(CommandLine.arguments[2..<CommandLine.arguments.count])
             let genieTable = Table("genie")
             let host = Expression<String?>("host")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
-            let query = genieTable.select(path, host).filter(tag == searchTag)
+            let query = genieTable.select(distinct: path, host).filter(searchTags.contains(tag))
             var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
             var items: [Dictionary<String, String>] = []
 
