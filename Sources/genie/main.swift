@@ -168,23 +168,15 @@ func removeCommand() {
 
 func searchCommand() {
     if checkDB() {
-        // TODO: This should be able to search for paths that match a set of tags
-        // The second part of this if clause is because if the user passes the --json
-        // flag, then CommandLine.argc is 4
+        // The second part of this if clause is because if the user passes either of
+        //the --json or --list flags, then CommandLine.argc is at least 4
         if CommandLine.argc >= 3 || (CommandLine.argc >= 4 && (jsonOutput || tagList)) {
             let searchTags: Array<String> = Array(CommandLine.arguments[2..<CommandLine.arguments.count])
             let genieTable = Table("genie")
             let host = Expression<String?>("host")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
-            let dupe = Expression<Bool>("cout", [Binding?])
-            // A query constructed as the following is for an inclusive OR of all tags
             let query = genieTable.select(distinct: path, host).filter(searchTags.contains(tag))
-            // A query constructed as the following is for an AND of all tags
-            // select path, host from genie where tag in (searchTags) group by 1,2 having count(*) > (searchTags.count - 1);
-            //genieTable.group([Expressible], having: <#T##Expression<Bool>#>)
-            //let query = genieTable.group(path, host).filter(searchTags.contains(tag), having: )
-            // A query constructed as the following is the search for a single tag
             var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
             var items: [Dictionary<String, String>] = []
 
