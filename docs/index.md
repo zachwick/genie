@@ -6,13 +6,7 @@ genie - a tool for tagging arbitrary file paths with arbitrary tags
 
 ## Installation
 
-1. Clone the project
-2. Build with `swift build -c release` (or `swift build` to build a debug version)
-3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable. This usually looks something like
-
-```
-cp ./.build/x86_64-apple-macosx/release/genie /usr/local/bin
-```
+Download the [latest release](https://github.com/zachwick/genie/releases/latest), and put the binary somewhere in your shell's PATH. Using an install location of `/usr/local/bin` is a popular choice.
 
 ## CLI Usage
 
@@ -76,6 +70,18 @@ ln -s ~/Dropbox/geniedb ~/Documents/.geniedb
 ```
 
 Once you've done this, genie will traverse the symlink and the backing store for genie can be synced and shared across multiple machines. This means that when using the `search` command, the returned paths may not live locally on the machine that you're invoking `genie` from. You will need to pay attention to the indicated host and then locate the file on the corresponding machine in order to interact with it.
+
+## Running a development version
+
+1. Clone the project
+2. Build with `swift build` (or `swift build -c release` to build a version with debugging symbols stripped out)
+3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable. This usually looks something like
+
+```
+cp .build/x86_64-apple-macosx/release/genie /usr/local/bin
+```
+
+4. Alternatively you can run the built version from within the `.build` folder
 
 ## License
 
