@@ -72,11 +72,11 @@ func checkDB() -> Bool  {
         // This call to `Connection` will createthe database file if it is not already present at the given filepath
         db = try! Connection(databaseFilePath)
         let genieTable = Table("genie")
-        let id = Expression<Int64>("id")
-        let host = Expression<String>("host")
-        let path = Expression<String?>("path")
-        let tag = Expression<String>("tag")
-        let timeCreated = Expression<String>("time_created")
+        let id = Expression<Int64>(value: "id")
+        let host = Expression<String>(value: "host")
+        let path = Expression<String?>(value: "path")
+        let tag = Expression<String>(value: "tag")
+        let timeCreated = Expression<String>(value: "time_created")
         
         try! db!.run(genieTable.create { t in
             t.column(id, primaryKey: true)
@@ -105,10 +105,10 @@ func tagCommand() {
             let hostName = Host.current().localizedName ?? ""
             
             let genieTable = Table("genie")
-            let host = Expression<String>("host")
-            let path = Expression<String?>("path")
-            let tag = Expression<String>("tag")
-            let timeCreated = Expression<String>("time_created")
+            let host = Expression<String>(value: "host")
+            let path = Expression<String?>(value: "path")
+            let tag = Expression<String>(value: "tag")
+            let timeCreated = Expression<String>(value: "time_created")
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd h:mm a Z"
             let now = dateFormatter.string(from: Date())
@@ -130,7 +130,7 @@ func listTagsCommand() {
     if checkDB() {
         if CommandLine.argc == 3 {
             let genieTable = Table("genie")
-            let tag = Expression<String>("tag")
+            let tag = Expression<String>(value: "tag")
             let query = genieTable.select(distinct: tag)
 
             for item in try! db!.prepare(query) {
@@ -154,8 +154,8 @@ func removeCommand() {
             pathToUntag = "\(dirURL.absoluteString[index...])"
             
             let genieTable = Table("genie")
-            let path = Expression<String?>("path")
-            let tag = Expression<String>("tag")
+            let path = Expression<String?>(value: "path")
+            let tag = Expression<String>(value: "tag")
             
             let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
             try! db!.run(rowToDelete.delete())
@@ -173,9 +173,9 @@ func searchCommand() {
         if CommandLine.argc >= 3 || (CommandLine.argc >= 4 && (jsonOutput || tagList)) {
             let searchTags: Array<String> = Array(CommandLine.arguments[2..<CommandLine.arguments.count])
             let genieTable = Table("genie")
-            let host = Expression<String?>("host")
-            let path = Expression<String?>("path")
-            let tag = Expression<String>("tag")
+            let host = Expression<String?>(value: "host")
+            let path = Expression<String?>(value: "path")
+            let tag = Expression<String>(value: "tag")
             let query = genieTable.select(distinct: path, host).filter(searchTags.contains(tag))
             var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
             var items: [Dictionary<String, String>] = []
@@ -183,16 +183,16 @@ func searchCommand() {
             for item in try! db!.prepare(query) {
                 if jsonOutput {
                     let result: Dictionary<String, String> = [
-                        "title": item[path]!,
-                        "subtitle": item[path]!,
-                        "arg": item[path]!,
-                        "autocomplete": item[path]!,
-                        "quicklookurl": item[path]!,
+                        "title": item[path],
+                        "subtitle": item[path],
+                        "arg": item[path],
+                        "autocomplete": item[path],
+                        "quicklookurl": item[path],
                         "type": "file"
                     ]
                     items.append(result)
                 } else {
-                    print("\(item[host]!): \(item[path]!)")
+                    print("\(item[host]): \(item[path])")
                 }
             }
             if jsonOutput {
@@ -223,8 +223,8 @@ func printCommand() {
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
             searchPath = "\(dirURL.absoluteString[index...])"
             
-            let path = Expression<String?>("path")
-            let tag = Expression<String>("tag")
+            let path = Expression<String?>(value: "path")
+            let tag = Expression<String>(value: "tag")
             let query = genieTable.select(tag).filter(path == searchPath)
             for item in try! db!.prepare(query) {
                 print("\(item[tag])")
@@ -261,29 +261,31 @@ if CommandLine.argc == 1  || (CommandLine.argc == 2 && jsonOutput) {
     printUsage()
 }
 
-switch CommandLine.arguments[1] {
-case "-h",
-     "--help":
-    printUsage()
-case "-v",
-     "--version":
-    print("\(commandName) \(genieVersion)")
-case "t",
-     "tag":
-    if tagList {
-        listTagsCommand()
-    } else {
-        tagCommand()
+if CommandLine.argc > 1 {
+    switch CommandLine.arguments[1] {
+    case "-h",
+        "--help":
+        printUsage()
+    case "-v",
+        "--version":
+        print("\(commandName) \(genieVersion)")
+    case "t",
+        "tag":
+        if tagList {
+            listTagsCommand()
+        } else {
+            tagCommand()
+        }
+    case "rm",
+        "remove":
+        removeCommand()
+    case "s",
+        "search":
+        searchCommand()
+    case "p",
+        "print":
+        printCommand()
+    default:
+        unknownCommand()
     }
-case "rm",
-     "remove":
-    removeCommand()
-case "s",
-     "search":
-    searchCommand()
-case "p",
-     "print":
-    printCommand()
-default:
-    unknownCommand()
 }

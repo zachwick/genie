@@ -6,26 +6,8 @@
         "repositoryURL": "https://github.com/dastrobu/argtree.git",
         "state": {
           "branch": null,
-          "revision": "20cc9b9581a9d4a138863a7343a505642266274e",
-          "version": "1.5.2"
-        }
-      },
-      {
-        "package": "HeliumLogger",
-        "repositoryURL": "https://github.com/IBM-Swift/HeliumLogger.git",
-        "state": {
-          "branch": null,
-          "revision": "146a36c2a91270e4213fa7d7e8192cd2e55d0ace",
-          "version": "1.9.0"
-        }
-      },
-      {
-        "package": "LoggerAPI",
-        "repositoryURL": "https://github.com/IBM-Swift/LoggerAPI.git",
-        "state": {
-          "branch": null,
-          "revision": "3357dd9526cdf9436fa63bb792b669e6efdc43da",
-          "version": "1.9.0"
+          "revision": "56715c23f2a2bb5414d89de4ce0735f1c04420ee",
+          "version": "1.5.5"
         }
       },
       {
@@ -33,8 +15,8 @@
         "repositoryURL": "https://github.com/stephencelis/SQLite.swift.git",
         "state": {
           "branch": null,
-          "revision": "0a9893ec030501a3956bee572d6b4fdd3ae158a1",
-          "version": "0.12.2"
+          "revision": "a95fc6df17d108bd99210db5e8a9bac90fe984b8",
+          "version": "0.15.3"
         }
       },
       {
@@ -42,8 +24,8 @@
         "repositoryURL": "https://github.com/apple/swift-log.git",
         "state": {
           "branch": null,
-          "revision": "e8aabbe95db22e064ad42f1a4a9f8982664c70ed",
-          "version": "1.1.1"
+          "revision": "9cb486020ebf03bfa5b5df985387a14a98744537",
+          "version": "1.6.1"
         }
       }
     ]
