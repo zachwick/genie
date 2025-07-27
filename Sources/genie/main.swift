@@ -1,7 +1,7 @@
 /**
 * genie - filesystem tagger
 *
-* Copyright 2017, 2018, 2019, 2020 zachwick <zach@zachwick.com>
+* Copyright 2017, 2018, 2019, 2020, 2025 zachwick <zach@zachwick.com>
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,8 @@ import Foundation
 import argtree
 
 let dbPath = ".geniedb"
-let databaseFilePath = "\(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])/\(dbPath)"
-let genieVersion = "1.1.1"
+let databaseFilePath = "\(NSHomeDirectory())/\(dbPath)"
+let genieVersion = "1.3.0"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var db: Connection?
 var jsonOutput = false
@@ -64,30 +64,59 @@ func unknownCommand() {
 func checkDB() -> Bool  {
     let fileManager = FileManager.default
     if fileManager.fileExists(atPath: databaseFilePath) {
-        // This call to `Connection` will createthe database file if it is not already present at the given filepath
-        db = try! Connection(databaseFilePath)
-        return true
+        // Open existing database and check if the genie table exists
+        do {
+            db = try Connection(databaseFilePath)
+            
+            // Check if the genie table exists
+            let tableExists = try db!.scalar("SELECT name FROM sqlite_master WHERE type='table' AND name='genie'") != nil
+            
+            if !tableExists {
+                // Create the genie table if it doesn't exist
+                let genieTable = Table("genie")
+                let id = Expression<Int64>("id")
+                let host = Expression<String>("host")
+                let path = Expression<String?>("path")
+                let tag = Expression<String>("tag")
+                let timeCreated = Expression<String>("time_created")
+
+                try db!.run(genieTable.create { t in
+                    t.column(id, primaryKey: true)
+                    t.column(host)
+                    t.column(path)
+                    t.column(tag)
+                    t.column(timeCreated)
+                })
+            }
+            return true
+        } catch {
+            print("Error: Unable to open existing database at \(databaseFilePath): \(error)")
+            return false
+        }
     } else {
         // Create the SQLite db and structure it correctly
-        // This call to `Connection` will createthe database file if it is not already present at the given filepath
-        db = try! Connection(databaseFilePath)
-        let genieTable = Table("genie")
-        let id = Expression<Int64>(value: "id")
-        let host = Expression<String>(value: "host")
-        let path = Expression<String?>(value: "path")
-        let tag = Expression<String>(value: "tag")
-        let timeCreated = Expression<String>(value: "time_created")
-        
-        try! db!.run(genieTable.create { t in
-            t.column(id, primaryKey: true)
-            t.column(host)
-            t.column(path)
-            t.column(tag)
-            t.column(timeCreated)
-        })
-        return true
+        do {
+            db = try Connection(databaseFilePath)
+            let genieTable = Table("genie")
+            let id = Expression<Int64>("id")
+            let host = Expression<String>("host")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
+            let timeCreated = Expression<String>("time_created")
+            
+            try db!.run(genieTable.create { t in
+                t.column(id, primaryKey: true)
+                t.column(host)
+                t.column(path)
+                t.column(tag)
+                t.column(timeCreated)
+            })
+            return true
+        } catch {
+            print("Error: Unable to create database at \(databaseFilePath): \(error)")
+            return false
+        }
     }
-
 }
 
 func tagCommand() {
@@ -102,13 +131,14 @@ func tagCommand() {
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
             pathToTag = "\(dirURL.absoluteString[index...])"
 
-            let hostName = Host.current().localizedName ?? ""
+            // ProcessInfo.processInfo.hostName
+            let hostName = ProcessInfo.processInfo.hostName
             
             let genieTable = Table("genie")
-            let host = Expression<String>(value: "host")
-            let path = Expression<String?>(value: "path")
-            let tag = Expression<String>(value: "tag")
-            let timeCreated = Expression<String>(value: "time_created")
+            let host = Expression<String>("host")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
+            let timeCreated = Expression<String>("time_created")
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd h:mm a Z"
             let now = dateFormatter.string(from: Date())
@@ -130,7 +160,7 @@ func listTagsCommand() {
     if checkDB() {
         if CommandLine.argc == 3 {
             let genieTable = Table("genie")
-            let tag = Expression<String>(value: "tag")
+            let tag = Expression<String>("tag")
             let query = genieTable.select(distinct: tag)
 
             for item in try! db!.prepare(query) {
@@ -154,8 +184,8 @@ func removeCommand() {
             pathToUntag = "\(dirURL.absoluteString[index...])"
             
             let genieTable = Table("genie")
-            let path = Expression<String?>(value: "path")
-            let tag = Expression<String>(value: "tag")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
             
             let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
             try! db!.run(rowToDelete.delete())
@@ -173,21 +203,22 @@ func searchCommand() {
         if CommandLine.argc >= 3 || (CommandLine.argc >= 4 && (jsonOutput || tagList)) {
             let searchTags: Array<String> = Array(CommandLine.arguments[2..<CommandLine.arguments.count])
             let genieTable = Table("genie")
-            let host = Expression<String?>(value: "host")
-            let path = Expression<String?>(value: "path")
-            let tag = Expression<String>(value: "tag")
+            let host = Expression<String?>("host")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
             let query = genieTable.select(distinct: path, host).filter(searchTags.contains(tag))
             var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
             var items: [Dictionary<String, String>] = []
 
             for item in try! db!.prepare(query) {
                 if jsonOutput {
+                    let pathValue = item[path] ?? ""
                     let result: Dictionary<String, String> = [
-                        "title": item[path],
-                        "subtitle": item[path],
-                        "arg": item[path],
-                        "autocomplete": item[path],
-                        "quicklookurl": item[path],
+                        "title": pathValue,
+                        "subtitle": pathValue,
+                        "arg": pathValue,
+                        "autocomplete": pathValue,
+                        "quicklookurl": pathValue,
                         "type": "file"
                     ]
                     items.append(result)
@@ -223,8 +254,8 @@ func printCommand() {
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
             searchPath = "\(dirURL.absoluteString[index...])"
             
-            let path = Expression<String?>(value: "path")
-            let tag = Expression<String>(value: "tag")
+            let path = Expression<String?>("path")
+            let tag = Expression<String>("tag")
             let query = genieTable.select(tag).filter(path == searchPath)
             for item in try! db!.prepare(query) {
                 print("\(item[tag])")
