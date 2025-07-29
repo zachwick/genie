@@ -26,17 +26,17 @@ let dbPath = ".geniedb"
 let databaseFilePath = "\(NSHomeDirectory())/\(dbPath)"
 let genieVersion = "1.3.0"
 let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
-var db: Connection?
+var database: Connection?
 var jsonOutput = false
 var tagList = false
 var customDbPath: String?
 var processedArgs: [String] = []
 
 // Exit codes
-let EXIT_SUCCESS: Int32 = 0
-let EXIT_USAGE_ERROR: Int32 = 1
-let EXIT_DATABASE_ERROR: Int32 = 2
-let EXIT_INVALID_EXPRESSION: Int32 = 3
+let exitSuccess: Int32 = 0
+let exitUsageError: Int32 = 1
+let exitDatabaseError: Int32 = 2
+let exitInvalidExpression: Int32 = 3
 
 func getDatabasePath() -> String {
     return customDbPath ?? databaseFilePath
@@ -94,18 +94,22 @@ func printUsage() {
 func unknownCommand() {
     print("Command \(processedArgs[1]) not found.")
     printUsage()
-    Foundation.exit(EXIT_USAGE_ERROR)
+    Foundation.exit(exitUsageError)
 }
 
-func checkDB() -> Bool  {
+func checkDB() -> Bool {
     let fileManager = FileManager.default
     if fileManager.fileExists(atPath: getDatabasePath()) {
         // Open existing database and check if the genie table exists
         do {
-            db = try Connection(getDatabasePath())
+            database = try Connection(getDatabasePath())
 
             // Check if the genie table exists
-            let tableExists = try db!.scalar("SELECT name FROM sqlite_master WHERE type='table' AND name='genie'") != nil
+            guard let dbase = database else {
+                print("Error: Database connection failed")
+                return false
+            }
+            let tableExists = try dbase.scalar("SELECT name FROM sqlite_master WHERE type='table' AND name='genie'") != nil
 
             if !tableExists {
                 // Create the genie table if it doesn't exist
@@ -116,12 +120,12 @@ func checkDB() -> Bool  {
                 let tag = Expression<String>("tag")
                 let timeCreated = Expression<String>("time_created")
 
-                try db!.run(genieTable.create { t in
-                    t.column(id, primaryKey: true)
-                    t.column(host)
-                    t.column(path)
-                    t.column(tag)
-                    t.column(timeCreated)
+                try dbase.run(genieTable.create { table in
+                    table.column(id, primaryKey: true)
+                    table.column(host)
+                    table.column(path)
+                    table.column(tag)
+                    table.column(timeCreated)
                 })
             }
             return true
@@ -132,7 +136,11 @@ func checkDB() -> Bool  {
     } else {
         // Create the SQLite db and structure it correctly
         do {
-            db = try Connection(getDatabasePath())
+            database = try Connection(getDatabasePath())
+            guard let dbase = database else {
+                print("Error: Database connection failed")
+                return false
+            }
             let genieTable = Table("genie")
             let id = Expression<Int64>("id")
             let host = Expression<String>("host")
@@ -140,12 +148,12 @@ func checkDB() -> Bool  {
             let tag = Expression<String>("tag")
             let timeCreated = Expression<String>("time_created")
 
-            try db!.run(genieTable.create { t in
-                t.column(id, primaryKey: true)
-                t.column(host)
-                t.column(path)
-                t.column(tag)
-                t.column(timeCreated)
+            try dbase.run(genieTable.create { table in
+                table.column(id, primaryKey: true)
+                table.column(host)
+                table.column(path)
+                table.column(tag)
+                table.column(timeCreated)
             })
             return true
         } catch {
@@ -214,6 +222,10 @@ func expandGlobPattern(_ pattern: String) -> [String] {
 
 func tagCommand() {
     if checkDB() {
+        guard let dbase = database else {
+            print("Error: Database connection failed")
+            Foundation.exit(exitDatabaseError)
+        }
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
         if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
@@ -254,7 +266,12 @@ func tagCommand() {
                                                path <- pathToTag,
                                                tag <- tagToUse,
                                                timeCreated <- now)
-                let _ = try! db!.run(insert)
+                do {
+                    _ = try dbase.run(insert)
+                } catch {
+                    print("Error: Unable to insert into database: \(error)")
+                    Foundation.exit(exitDatabaseError)
+                }
             }
 
             if pathsToTag.count > 1 {
@@ -263,33 +280,46 @@ func tagCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
-            Foundation.exit(EXIT_USAGE_ERROR)
+            Foundation.exit(exitUsageError)
         }
     } else {
-        Foundation.exit(EXIT_DATABASE_ERROR)
+        Foundation.exit(exitDatabaseError)
     }
 }
 
 func listTagsCommand() {
     // Fetch all distinct tags from the db and print them out
     if checkDB() {
+        guard let dbase = database else {
+            print("Error: Database connection failed")
+            Foundation.exit(exitDatabaseError)
+        }
         if processedArgs.count == 2 {
             let genieTable = Table("genie")
             let tag = Expression<String>("tag")
             let query = genieTable.select(distinct: tag)
 
-            for item in try! db!.prepare(query) {
-                print("\(item[tag])")
+            do {
+                for item in try dbase.prepare(query) {
+                    print("\(item[tag])")
+                }
+            } catch {
+                print("Error: Unable to query database: \(error)")
+                Foundation.exit(exitDatabaseError)
             }
 
         }
     } else {
-        Foundation.exit(EXIT_DATABASE_ERROR)
+        Foundation.exit(exitDatabaseError)
     }
 }
 
 func removeCommand() {
     if checkDB() {
+        guard let dbase = database else {
+            print("Error: Database connection failed")
+            Foundation.exit(exitDatabaseError)
+        }
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
         if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
@@ -320,8 +350,13 @@ func removeCommand() {
             var removedCount = 0
             for pathToUntag in pathsToUntag {
                 let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
-                let deletedRows = try! db!.run(rowToDelete.delete())
-                removedCount += deletedRows
+                do {
+                    let deletedRows = try dbase.run(rowToDelete.delete())
+                    removedCount += deletedRows
+                } catch {
+                    print("Error: Unable to delete from database: \(error)")
+                    Foundation.exit(exitDatabaseError)
+                }
             }
 
             if pathsToUntag.count > 1 {
@@ -330,31 +365,35 @@ func removeCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
-            Foundation.exit(EXIT_USAGE_ERROR)
+            Foundation.exit(exitUsageError)
         }
     } else {
-        Foundation.exit(EXIT_DATABASE_ERROR)
+        Foundation.exit(exitDatabaseError)
     }
 }
 
 func searchCommand() {
     if checkDB() {
+        guard let dbase = database else {
+            print("Error: Database connection failed")
+            Foundation.exit(exitDatabaseError)
+        }
         // The second part of this if clause is because if the user passes either of
-        //the --json or --list flags, then CommandLine.argc is at least 4
+        // the --json or --list flags, then CommandLine.argc is at least 4
         if processedArgs.count >= 3 || (processedArgs.count >= 4 && (jsonOutput || tagList)) {
             let searchExpression = processedArgs[2..<processedArgs.count].joined(separator: " ")
 
             let parser = BooleanExpressionParser()
             if let expression = parser.parse(searchExpression) {
-                let evaluator = BooleanExpressionEvaluator(db: db!)
+                let evaluator = BooleanExpressionEvaluator(database: dbase)
                 let matchingPaths = evaluator.evaluate(expression)
 
-                var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
+                var outputArray: [String: [Dictionary<String, String>]] = [:]
                 var items: [Dictionary<String, String>] = []
 
                 for pathValue in matchingPaths {
                     if jsonOutput {
-                        let result: Dictionary<String, String> = [
+                        let result: [String: String] = [
                             "title": pathValue,
                             "subtitle": pathValue,
                             "arg": pathValue,
@@ -380,20 +419,24 @@ func searchCommand() {
             } else {
                 print("Error: Invalid boolean expression")
                 printUsage()
-                Foundation.exit(EXIT_INVALID_EXPRESSION)
+                Foundation.exit(exitInvalidExpression)
             }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
-            Foundation.exit(EXIT_USAGE_ERROR)
+            Foundation.exit(exitUsageError)
         }
     } else {
-        Foundation.exit(EXIT_DATABASE_ERROR)
+        Foundation.exit(exitDatabaseError)
     }
 }
 
 func printCommand() {
     if checkDB() {
+        guard let dbase = database else {
+            print("Error: Database connection failed")
+            Foundation.exit(exitDatabaseError)
+        }
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 4
         if processedArgs.count == 3 || (processedArgs.count == 4 && (jsonOutput || tagList)) {
@@ -407,23 +450,30 @@ func printCommand() {
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let query = genieTable.select(tag).filter(path == searchPath)
-            for item in try! db!.prepare(query) {
-                print("\(item[tag])")
+            do {
+                for item in try dbase.prepare(query) {
+                    print("\(item[tag])")
+                }
+            } catch {
+                print("Error: Unable to query database: \(error)")
+                Foundation.exit(exitDatabaseError)
             }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
-            Foundation.exit(EXIT_USAGE_ERROR)
+            Foundation.exit(exitUsageError)
         }
     } else {
-        Foundation.exit(EXIT_DATABASE_ERROR)
+        Foundation.exit(exitDatabaseError)
     }
 }
 
 // Boolean expression structures
+// swiftlint:disable identifier_name
 enum BooleanOperator {
     case and, or, not, xor
 }
+// swiftlint:enable identifier_name
 
 enum BooleanExpression {
     case tag(String)
@@ -501,14 +551,14 @@ class BooleanExpressionParser {
                     }
                 }
             } else if ["and", "or", "xor", "&", "|", "^"].contains(token) {
-                let op: BooleanOperator
+                let oper: BooleanOperator
                 switch token {
-                case "and", "&": op = .and
-                case "or", "|": op = .or
-                case "xor", "^": op = .xor
-                default: op = .and
+                case "and", "&": oper = .and
+                case "or", "|": oper = .or
+                case "xor", "^": oper = .xor
+                default: oper = .and
                 }
-                operators.append(op)
+                operators.append(oper)
                 currentIndex += 1
             } else {
                 // Assume it's a tag
@@ -523,10 +573,8 @@ class BooleanExpressionParser {
         }
 
         var result = expressions[0]
-        for i in 0..<operators.count {
-            if i + 1 < expressions.count {
-                result = .operation(operators[i], [result, expressions[i + 1]])
-            }
+        for index in 0..<operators.count where index + 1 < expressions.count {
+            result = .operation(operators[index], [result, expressions[index + 1]])
         }
 
         return result
@@ -534,11 +582,11 @@ class BooleanExpressionParser {
 }
 
 class BooleanExpressionEvaluator {
-    private let db: Connection
+    private let database: Connection
     private let genieTable: Table
 
-    init(db: Connection) {
-        self.db = db
+    init(database: Connection) {
+        self.database = database
         self.genieTable = Table("genie")
     }
 
@@ -546,8 +594,8 @@ class BooleanExpressionEvaluator {
         switch expression {
         case .tag(let tag):
             return getPathsWithTag(tag)
-        case .operation(let op, let expressions):
-            switch op {
+        case .operation(let oper, let expressions):
+            switch oper {
             case .and:
                 guard expressions.count == 2 else { return [] }
                 let left = evaluate(expressions[0])
@@ -579,10 +627,15 @@ class BooleanExpressionEvaluator {
         let query = genieTable.select(distinct: path).filter(tagExpr == tag)
 
         var paths: Set<String> = []
-        for item in try! db.prepare(query) {
-            if let pathValue = item[path] {
-                paths.insert(pathValue)
+        do {
+            for item in try database.prepare(query) {
+                if let pathValue = item[path] {
+                    paths.insert(pathValue)
+                }
             }
+        } catch {
+            print("Error: Unable to query database: \(error)")
+            return []
         }
         return paths
     }
@@ -592,10 +645,15 @@ class BooleanExpressionEvaluator {
         let query = genieTable.select(distinct: path)
 
         var paths: Set<String> = []
-        for item in try! db.prepare(query) {
-            if let pathValue = item[path] {
-                paths.insert(pathValue)
+        do {
+            for item in try database.prepare(query) {
+                if let pathValue = item[path] {
+                    paths.insert(pathValue)
+                }
             }
+        } catch {
+            print("Error: Unable to query database: \(error)")
+            return []
         }
         return paths
     }
@@ -623,14 +681,14 @@ if let dbIndex = processedArgs.firstIndex(of: "--db") {
         processedArgs.remove(at: dbIndex)
     } else {
         print("Error: --db flag requires a path argument")
-        Foundation.exit(EXIT_USAGE_ERROR)
+        Foundation.exit(exitUsageError)
     }
 }
 
 if processedArgs.count == 1 || (processedArgs.count == 2 && jsonOutput) {
     print("Error: Not enough arguments\n")
     printUsage()
-    Foundation.exit(EXIT_USAGE_ERROR)
+    Foundation.exit(exitUsageError)
 }
 
 if processedArgs.count > 1 {
