@@ -192,8 +192,9 @@ Once you've done this, genie will traverse the symlink and the backing store for
 ## Running a development version
 
 1. Clone the project
-2. Build with `swift build` (or `swift build -c release` to build a version with debugging symbols stripped out)
-3. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable. This usually looks something like
+2. Set up the git hooks by running `./scripts/setup_hooks.sh` from the top-level of the repository.
+3. Build with `swift build` (or `swift build -c release` to build a version with debugging symbols stripped out)
+4. Install by copying the binary from the architecture specific folder in `.build/` to a location in your PATH environment variable. This usually looks something like
 
 ```
 cp .build/x86_64-apple-macosx/release/genie /usr/local/bin

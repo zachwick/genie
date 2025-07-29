@@ -27,8 +27,9 @@ cp genie /usr/local/bin
 
 ### Build from Source
 1. Clone the repository
-2. Build with Swift: `swift build` (or `swift build -c release` for optimized build)
-3. Install the binary:
+2. Set up the git hooks by running `./scripts/setup_hooks.sh` from the top-level of the repository.
+3. Build with Swift: `swift build` (or `swift build -c release` for optimized build)
+4. Install the binary:
 ```bash
 cp .build/x86_64-apple-macosx/release/genie /usr/local/bin
 ```
