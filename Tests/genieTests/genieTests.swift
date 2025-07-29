@@ -88,27 +88,74 @@ final class genieTests: XCTestCase {
         XCTAssertEqual(result.exitCode, 1) // Should return exit code 1 for usage error
     }
     
+    func testGlobPatternTagging() throws {
+        // Create test files with different extensions
+        createTestFile("test1.py")
+        createTestFile("test2.py")
+        createTestFile("test3.js")
+        createTestFile("test4.txt")
+
+        // Change to test directory for the test
+        let testDir = NSTemporaryDirectory() + "genie_test_files"
+        let originalDir = FileManager.default.currentDirectoryPath
+        FileManager.default.changeCurrentDirectoryPath(testDir)
+
+        defer {
+            // Restore original directory
+            FileManager.default.changeCurrentDirectoryPath(originalDir)
+        }
+
+        // Tag all Python files using glob pattern
+        let result = runGenieCommand(["tag", "*.py", "python"])
+
+        // Verify the command succeeded
+        XCTAssertEqual(result.exitCode, 0)
+
+        // Search for files with the python tag
+        let searchResult = runGenieCommand(["search", "python"])
+        XCTAssertTrue(searchResult.output.contains("test1.py"))
+        XCTAssertTrue(searchResult.output.contains("test2.py"))
+        XCTAssertFalse(searchResult.output.contains("test3.js"))
+        XCTAssertFalse(searchResult.output.contains("test4.txt"))
+
+        // Test removing tags with glob pattern
+        let removeResult = runGenieCommand(["rm", "*.py", "python"])
+        XCTAssertEqual(removeResult.exitCode, 0)
+
+        // Verify tags were removed
+        let searchAfterRemove = runGenieCommand(["search", "python"])
+        XCTAssertFalse(searchAfterRemove.output.contains("test1.py"))
+        XCTAssertFalse(searchAfterRemove.output.contains("test2.py"))
+    }
+
+    func testGlobPatternNoMatches() throws {
+        // Test with a pattern that doesn't match any files
+        let result = runGenieCommand(["tag", "*.nonexistent", "test"])
+        XCTAssertEqual(result.exitCode, 0) // Should not error, just warn
+        XCTAssertTrue(result.output.contains("Warning: No files match the pattern"))
+    }
+
     func testHelpFlag() throws {
         let result = runGenieCommand(["--help"])
         XCTAssertTrue(result.output.contains("USAGE:"))
         XCTAssertTrue(result.output.contains("SUBCOMMANDS:"))
         XCTAssertEqual(result.exitCode, 0)
     }
-    
+
     func testShortHelpFlag() throws {
         let result = runGenieCommand(["-h"])
         XCTAssertTrue(result.output.contains("USAGE:"))
         XCTAssertTrue(result.output.contains("SUBCOMMANDS:"))
         XCTAssertEqual(result.exitCode, 0)
     }
-    
+
     func testVersionFlag() throws {
         let result = runGenieCommand(["--version"])
         XCTAssertTrue(result.output.contains("genie"))
         XCTAssertTrue(result.output.contains("1.3.0"))
         XCTAssertEqual(result.exitCode, 0)
     }
-    
+
     func testShortVersionFlag() throws {
         let result = runGenieCommand(["-v"])
         XCTAssertTrue(result.output.contains("genie"))
@@ -577,6 +624,8 @@ final class genieTests: XCTestCase {
     static var allTests = [
         // Command Line Interface Tests
         ("testNoArguments", testNoArguments),
+        ("testGlobPatternTagging", testGlobPatternTagging),
+        ("testGlobPatternNoMatches", testGlobPatternNoMatches),
         ("testHelpFlag", testHelpFlag),
         ("testShortHelpFlag", testShortHelpFlag),
         ("testVersionFlag", testVersionFlag),
