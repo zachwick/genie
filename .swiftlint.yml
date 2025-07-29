@@ -1,0 +1,59 @@
+# SwiftLint Configuration
+# Basic configuration for the genie project
+
+# Disable rules that are too strict for development
+disabled_rules:
+  - line_length
+  - function_body_length
+  - file_length
+  - type_body_length
+  - cyclomatic_complexity
+
+# Opt-in rules that are useful but not enabled by default
+opt_in_rules:
+  - empty_count
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - overridden_super_call
+  - redundant_nil_coalescing
+  - unused_import
+  - vertical_whitespace
+
+# Custom rule configurations
+line_length:
+  warning: 120
+  error: 150
+
+function_body_length:
+  warning: 50
+  error: 100
+
+file_length:
+  warning: 500
+  error: 1000
+
+type_body_length:
+  warning: 300
+  error: 600
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+# Exclude certain directories and files
+excluded:
+  - Tests
+  - docs
+  - mcp
+  - .build
+  - Package.resolved
+
+# Include only Swift files
+included:
+  - Sources
+
+# Reporter configuration
+reporter: "xcode"
+
+# Cache configuration
+cache_path: .swiftlint_cache 
