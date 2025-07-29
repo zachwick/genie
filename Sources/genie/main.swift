@@ -103,10 +103,10 @@ func checkDB() -> Bool  {
         // Open existing database and check if the genie table exists
         do {
             db = try Connection(getDatabasePath())
-            
+
             // Check if the genie table exists
             let tableExists = try db!.scalar("SELECT name FROM sqlite_master WHERE type='table' AND name='genie'") != nil
-            
+
             if !tableExists {
                 // Create the genie table if it doesn't exist
                 let genieTable = Table("genie")
@@ -139,7 +139,7 @@ func checkDB() -> Bool  {
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let timeCreated = Expression<String>("time_created")
-            
+
             try db!.run(genieTable.create { t in
                 t.column(id, primaryKey: true)
                 t.column(host)
@@ -219,7 +219,7 @@ func tagCommand() {
         if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
             let pathToTag = processedArgs[2]
             let tagToUse = processedArgs[3]
-            
+
             // Check if the path contains glob patterns
             let pathsToTag: [String]
             if pathToTag.contains("*") || pathToTag.contains("?") {
@@ -238,7 +238,7 @@ func tagCommand() {
 
             // ProcessInfo.processInfo.hostName
             let hostName = ProcessInfo.processInfo.hostName
-            
+
             let genieTable = Table("genie")
             let host = Expression<String>("host")
             let path = Expression<String?>("path")
@@ -247,7 +247,7 @@ func tagCommand() {
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd h:mm a Z"
             let now = dateFormatter.string(from: Date())
-            
+
             // Tag each matching path
             for pathToTag in pathsToTag {
                 let insert = genieTable.insert(host <- hostName,
@@ -295,7 +295,7 @@ func removeCommand() {
         if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
             let pathToUntag = processedArgs[2]
             let tagToRemove = processedArgs[3]
-            
+
             // Check if the path contains glob patterns
             let pathsToUntag: [String]
             if pathToUntag.contains("*") || pathToUntag.contains("?") {
@@ -311,11 +311,11 @@ func removeCommand() {
                 let relativePath = "\(dirURL.absoluteString[index...])"
                 pathsToUntag = [relativePath]
             }
-            
+
             let genieTable = Table("genie")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
-            
+
             // Remove tag from each matching path
             var removedCount = 0
             for pathToUntag in pathsToUntag {
@@ -323,7 +323,7 @@ func removeCommand() {
                 let deletedRows = try! db!.run(rowToDelete.delete())
                 removedCount += deletedRows
             }
-            
+
             if pathsToUntag.count > 1 {
                 print("Removed tag '\(tagToRemove)' from \(removedCount) files")
             }
@@ -343,15 +343,15 @@ func searchCommand() {
         //the --json or --list flags, then CommandLine.argc is at least 4
         if processedArgs.count >= 3 || (processedArgs.count >= 4 && (jsonOutput || tagList)) {
             let searchExpression = processedArgs[2..<processedArgs.count].joined(separator: " ")
-            
+
             let parser = BooleanExpressionParser()
             if let expression = parser.parse(searchExpression) {
                 let evaluator = BooleanExpressionEvaluator(db: db!)
                 let matchingPaths = evaluator.evaluate(expression)
-                
+
                 var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
                 var items: [Dictionary<String, String>] = []
-                
+
                 for pathValue in matchingPaths {
                     if jsonOutput {
                         let result: Dictionary<String, String> = [
@@ -367,7 +367,7 @@ func searchCommand() {
                         print(pathValue)
                     }
                 }
-                
+
                 if jsonOutput {
                     let encoder = JSONEncoder()
                     outputArray["items"] = items
@@ -399,11 +399,11 @@ func printCommand() {
         if processedArgs.count == 3 || (processedArgs.count == 4 && (jsonOutput || tagList)) {
             var searchPath = processedArgs[2]
             let genieTable = Table("genie")
-            
+
             let dirURL = URL(fileURLWithPath: searchPath)
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
             searchPath = "\(dirURL.absoluteString[index...])"
-            
+
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             let query = genieTable.select(tag).filter(path == searchPath)
@@ -434,19 +434,19 @@ enum BooleanExpression {
 class BooleanExpressionParser {
     private var tokens: [String] = []
     private var currentIndex = 0
-    
+
     func parse(_ expression: String) -> BooleanExpression? {
         // Tokenize the expression
         tokens = tokenize(expression)
         currentIndex = 0
-        
+
         return parseExpression()
     }
-    
+
     private func tokenize(_ expression: String) -> [String] {
         var tokens: [String] = []
         var current = ""
-        
+
         for char in expression {
             if char.isWhitespace {
                 if !current.isEmpty {
@@ -463,21 +463,21 @@ class BooleanExpressionParser {
                 current.append(char)
             }
         }
-        
+
         if !current.isEmpty {
             tokens.append(current)
         }
-        
+
         return tokens
     }
-    
+
     private func parseExpression() -> BooleanExpression? {
         var expressions: [BooleanExpression] = []
         var operators: [BooleanOperator] = []
-        
+
         while currentIndex < tokens.count {
             let token = tokens[currentIndex]
-            
+
             if token == "(" {
                 currentIndex += 1
                 if let subExpr = parseExpression() {
@@ -516,19 +516,19 @@ class BooleanExpressionParser {
                 currentIndex += 1
             }
         }
-        
+
         // Evaluate expressions with operators
         if expressions.isEmpty {
             return nil
         }
-        
+
         var result = expressions[0]
         for i in 0..<operators.count {
             if i + 1 < expressions.count {
                 result = .operation(operators[i], [result, expressions[i + 1]])
             }
         }
-        
+
         return result
     }
 }
@@ -536,12 +536,12 @@ class BooleanExpressionParser {
 class BooleanExpressionEvaluator {
     private let db: Connection
     private let genieTable: Table
-    
+
     init(db: Connection) {
         self.db = db
         self.genieTable = Table("genie")
     }
-    
+
     func evaluate(_ expression: BooleanExpression) -> Set<String> {
         switch expression {
         case .tag(let tag):
@@ -572,12 +572,12 @@ class BooleanExpressionEvaluator {
             return allPaths.subtracting(pathsWithExpr)
         }
     }
-    
+
     private func getPathsWithTag(_ tag: String) -> Set<String> {
         let path = Expression<String?>("path")
         let tagExpr = Expression<String>("tag")
         let query = genieTable.select(distinct: path).filter(tagExpr == tag)
-        
+
         var paths: Set<String> = []
         for item in try! db.prepare(query) {
             if let pathValue = item[path] {
@@ -586,11 +586,11 @@ class BooleanExpressionEvaluator {
         }
         return paths
     }
-    
+
     private func getAllPaths() -> Set<String> {
         let path = Expression<String?>("path")
         let query = genieTable.select(distinct: path)
-        
+
         var paths: Set<String> = []
         for item in try! db.prepare(query) {
             if let pathValue = item[path] {
