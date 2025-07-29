@@ -58,6 +58,20 @@ While you _can_ use the Alfred workflow with the `tag`, `rm`, and `print` genie 
 
 Some common actions include quicklooking the file with either the `shift` key or `cmd + y`. Once you're quicklooking a filepath, Quick Look often has additional actions that you can take such as opening a file in a particular application.
 
+## MCP Usage
+
+A python MCP server is provided that can be used with a local MCP client. To use this local MCP server with Claude for instance, you will first need to clone the repository. Then add the following to your Claude configuration:
+
+        "genie": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/genie/mcp",
+        "run",
+        "genie.py"
+      ]
+    }
+
 ## Advanced Usage
 
 On macOS, genie uses `~/Documents/.geniedb` as the location of its backing sqlite store. If there is not a file to be found at that location whenever `genie` is invoked, it will create the file and the requisite sqlite table(s).
