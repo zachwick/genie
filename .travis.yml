@@ -1,7 +1,7 @@
 if: tag IS blank
 branches:
   only:
-  - master
+  - main
 env:
   global:
   - SWIFT_BRANCH=swift-5.0.1-release
