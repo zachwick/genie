@@ -183,7 +183,7 @@ func tagCommand() {
 func listTagsCommand() {
     // Fetch all distinct tags from the db and print them out
     if checkDB() {
-        if processedArgs.count == 3 {
+        if processedArgs.count == 2 {
             let genieTable = Table("genie")
             let tag = Expression<String>("tag")
             let query = genieTable.select(distinct: tag)
