@@ -66,6 +66,9 @@ func printUsage() {
             genie search "tag1 & (tag2 | tag3)"  # Same as above using single char operators
             genie search "tag1 xor tag2"         # Files with exactly one of tag1 or tag2
             genie search "tag1 ^ tag2"           # Same as above using single char operators
+            genie tag "*.py" python              # Tag all Python files in current directory
+            genie tag "src/**/*.ts" typescript   # Tag all TypeScript files recursively in src/
+            genie rm "*.log" debug               # Remove debug tag from all log files
 
         OPERATORS:
             AND: "and" or "&"
@@ -73,12 +76,17 @@ func printUsage() {
             NOT: "not" or "!"
             XOR: "xor" or "^"
 
+        GLOB PATTERNS:
+            *               Matches any sequence of characters
+            ?               Matches any single character
+            **              Matches directories recursively (double splat)
+
         SUBCOMMANDS:
             help       Prints this help message
-            rm         remove from the given PATH the given TAG
+            rm         remove from the given PATH the given TAG (supports glob patterns)
             search (s) search for and return all PATHS using boolean expressions (e.g., "tag1 and not tag2", "tag1 and (tag2 or tag3)")
             print  (p) show all tags applied to the given PATH
-            tag    (t) tag the given PATH with the given TAG
+            tag    (t) tag the given PATH with the given TAG (supports glob patterns)
         """
     print(usageString)
 }
@@ -147,17 +155,86 @@ func checkDB() -> Bool  {
     }
 }
 
+func expandGlobPattern(_ pattern: String) -> [String] {
+    let fileManager = FileManager.default
+    let currentDirectory = fileManager.currentDirectoryPath
+
+    // Convert glob pattern to a regular expression
+    var regexPattern = pattern
+        .replacingOccurrences(of: ".", with: "\\.")
+        .replacingOccurrences(of: "*", with: ".*")
+        .replacingOccurrences(of: "?", with: ".")
+
+    // Handle ** (double splat) for recursive directory matching
+    regexPattern = regexPattern.replacingOccurrences(of: "\\*\\*", with: ".*")
+
+    // Add start and end anchors
+    regexPattern = "^" + regexPattern + "$"
+
+    guard let regex = try? NSRegularExpression(pattern: regexPattern) else {
+        return []
+    }
+
+    var matchingPaths: [String] = []
+
+    func enumerateFiles(at path: String, isRecursive: Bool = false) {
+        do {
+            let contents = try fileManager.contentsOfDirectory(atPath: path)
+            for item in contents {
+                let fullPath = (path as NSString).appendingPathComponent(item)
+                let relativePath = (fullPath as NSString).replacingOccurrences(of: currentDirectory + "/", with: "")
+
+                // Check if this path matches our pattern
+                let range = NSRange(location: 0, length: relativePath.count)
+                if regex.firstMatch(in: relativePath, range: range) != nil {
+                    matchingPaths.append(relativePath)
+                }
+
+                // If we're doing recursive search and this is a directory, recurse
+                if isRecursive {
+                    var isDirectory: ObjCBool = false
+                    if fileManager.fileExists(atPath: fullPath, isDirectory: &isDirectory) && isDirectory.boolValue {
+                        enumerateFiles(at: fullPath, isRecursive: true)
+                    }
+                }
+            }
+        } catch {
+            // Silently ignore errors for individual directories
+        }
+    }
+
+    // Check if pattern contains ** for recursive search
+    let isRecursive = pattern.contains("**")
+
+    // Start enumeration from current directory
+    enumerateFiles(at: currentDirectory, isRecursive: isRecursive)
+
+    return matchingPaths
+}
+
 func tagCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
         if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
-            var pathToTag = processedArgs[2]
+            let pathToTag = processedArgs[2]
             let tagToUse = processedArgs[3]
             
-            let dirURL = URL(fileURLWithPath: pathToTag)
-            let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
-            pathToTag = "\(dirURL.absoluteString[index...])"
+            // Check if the path contains glob patterns
+            let pathsToTag: [String]
+            if pathToTag.contains("*") || pathToTag.contains("?") {
+                pathsToTag = expandGlobPattern(pathToTag)
+                if pathsToTag.isEmpty {
+                    print("Warning: No files match the pattern '\(pathToTag)'")
+                    return
+                }
+            } else {
+                // Single file path - convert to relative path
+                let dirURL = URL(fileURLWithPath: pathToTag)
+                let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
+                let relativePath = "\(dirURL.absoluteString[index...])"
+                pathsToTag = [relativePath]
+            }
 
             // ProcessInfo.processInfo.hostName
             let hostName = ProcessInfo.processInfo.hostName
@@ -171,11 +248,18 @@ func tagCommand() {
             dateFormatter.dateFormat = "yyyy-MM-dd h:mm a Z"
             let now = dateFormatter.string(from: Date())
             
-            let insert = genieTable.insert(host <- hostName,
-                                           path <- pathToTag,
-                                           tag <- tagToUse,
-                                           timeCreated <- now)
-            let _ = try! db!.run(insert)
+            // Tag each matching path
+            for pathToTag in pathsToTag {
+                let insert = genieTable.insert(host <- hostName,
+                                               path <- pathToTag,
+                                               tag <- tagToUse,
+                                               timeCreated <- now)
+                let _ = try! db!.run(insert)
+            }
+
+            if pathsToTag.count > 1 {
+                print("Tagged \(pathsToTag.count) files with '\(tagToUse)'")
+            }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
@@ -209,19 +293,40 @@ func removeCommand() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
         if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
-            var pathToUntag = processedArgs[2]
+            let pathToUntag = processedArgs[2]
             let tagToRemove = processedArgs[3]
             
-            let dirURL = URL(fileURLWithPath: pathToUntag)
-            let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
-            pathToUntag = "\(dirURL.absoluteString[index...])"
+            // Check if the path contains glob patterns
+            let pathsToUntag: [String]
+            if pathToUntag.contains("*") || pathToUntag.contains("?") {
+                pathsToUntag = expandGlobPattern(pathToUntag)
+                if pathsToUntag.isEmpty {
+                    print("Warning: No files match the pattern '\(pathToUntag)'")
+                    return
+                }
+            } else {
+                // Single file path - convert to relative path
+                let dirURL = URL(fileURLWithPath: pathToUntag)
+                let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
+                let relativePath = "\(dirURL.absoluteString[index...])"
+                pathsToUntag = [relativePath]
+            }
             
             let genieTable = Table("genie")
             let path = Expression<String?>("path")
             let tag = Expression<String>("tag")
             
-            let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
-            try! db!.run(rowToDelete.delete())
+            // Remove tag from each matching path
+            var removedCount = 0
+            for pathToUntag in pathsToUntag {
+                let rowToDelete = genieTable.filter(path == pathToUntag).filter(tag == tagToRemove)
+                let deletedRows = try! db!.run(rowToDelete.delete())
+                removedCount += deletedRows
+            }
+            
+            if pathsToUntag.count > 1 {
+                print("Removed tag '\(tagToRemove)' from \(removedCount) files")
+            }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
