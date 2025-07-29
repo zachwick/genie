@@ -105,12 +105,12 @@ def remove_tag(file_path: str, tag: str) -> str:
 
 
 @mcp.tool()
-def search_by_tags(tags: str, json_output: bool = False) -> str:
+def search_by_simple_tags(tags: str, json_output: bool = False) -> str:
     """
-    Search for file paths that have all of the specified tags.
+    Search for file paths that have all of the specified tags (simple AND logic).
 
     Args:
-        tags: Space-separated list of tags to search for
+        tags: Space-separated list of tags to search for (all tags must be present)
         json_output: Whether to return output in JSON format
 
     Returns:
@@ -122,8 +122,11 @@ def search_by_tags(tags: str, json_output: bool = False) -> str:
     if not tag_list:
         return "Error: No tags provided for search"
 
-    # Build command arguments
-    args = ["search"] + tag_list
+    # Convert to boolean expression with AND logic
+    boolean_expression = " and ".join(tag_list)
+
+    # Build command arguments - pass the entire expression as a single string
+    args = ["search", boolean_expression]
     if json_output:
         args.insert(1, "--json")  # Add --json flag after 'search'
 
@@ -134,6 +137,38 @@ def search_by_tags(tags: str, json_output: bool = False) -> str:
             return result["output"]
         else:
             return f"No files found with tags: {', '.join(tag_list)}"
+    else:
+        error_msg = result.get("error", "Unknown error")
+        return f"Search failed: {error_msg}"
+
+
+@mcp.tool()
+def search_by_tags(tags: str, json_output: bool = False) -> str:
+    """
+    Search for file paths using boolean tag expressions.
+
+    Args:
+        tags: Boolean expression of tags to search for (e.g., "tag1 and not tag2", "tag1 & (tag2 | tag3)")
+        json_output: Whether to return output in JSON format
+
+    Returns:
+        List of matching file paths or error details
+    """
+    if not tags.strip():
+        return "Error: No tags provided for search"
+
+    # Build command arguments - pass the entire expression as a single string
+    args = ["search", tags.strip()]
+    if json_output:
+        args.insert(1, "--json")  # Add --json flag after 'search'
+
+    result = run_genie_command(args)
+
+    if result["success"]:
+        if result["output"]:
+            return result["output"]
+        else:
+            return f"No files found matching expression: {tags}"
     else:
         error_msg = result.get("error", "Unknown error")
         return f"Search failed: {error_msg}"
@@ -254,6 +289,41 @@ def check_genie_status() -> str:
 • Ready to use: {'Yes' if db_exists else 'Yes (database will be initialized)'}"""
 
     return status
+
+
+@mcp.tool()
+def search_examples() -> str:
+    """
+    Show examples of boolean tag expressions for search.
+
+    Returns:
+        Examples of boolean tag expressions and their meanings
+    """
+    examples = """Boolean Tag Expression Examples:
+
+BASIC OPERATORS:
+• "tag1 and tag2" - Files with both tag1 AND tag2
+• "tag1 or tag2" - Files with either tag1 OR tag2 (or both)
+• "tag1 and not tag2" - Files with tag1 but NOT tag2
+• "tag1 xor tag2" - Files with exactly one of tag1 or tag2 (not both)
+
+SINGLE CHARACTER OPERATORS:
+• "tag1 & tag2" - Same as "tag1 and tag2"
+• "tag1 | tag2" - Same as "tag1 or tag2"
+• "tag1 & !tag2" - Same as "tag1 and not tag2"
+• "tag1 ^ tag2" - Same as "tag1 xor tag2"
+
+COMPLEX EXPRESSIONS:
+• "tag1 and (tag2 or tag3)" - Files with tag1 AND (tag2 OR tag3)
+• "tag1 & (tag2 | tag3)" - Same as above using single char operators
+• "(tag1 or tag2) and not tag3" - Files with (tag1 OR tag2) but NOT tag3
+• "tag1 xor (tag2 and tag3)" - Files with tag1 XOR (tag2 AND tag3)
+
+USAGE:
+Use search_by_tags() for boolean expressions
+Use search_by_simple_tags() for simple space-separated tag lists (AND logic only)"""
+
+    return examples
 
 
 if __name__ == "__main__":
