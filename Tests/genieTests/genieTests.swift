@@ -7,22 +7,15 @@ final class genieTests: XCTestCase {
     // MARK: - Test Setup and Teardown
     
     var testDBPath: String!
-    var originalDBPath: String!
     
     override func setUp() {
         super.setUp()
         
-        // Create a temporary database for testing
+        // Create a temporary database path for testing
         testDBPath = NSTemporaryDirectory() + "test_geniedb"
-        originalDBPath = NSHomeDirectory() + "/.geniedb"
-        
-        // Backup original database if it exists
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: originalDBPath) {
-            try? fileManager.copyItem(atPath: originalDBPath, toPath: originalDBPath + ".backup")
-        }
         
         // Remove test database if it exists
+        let fileManager = FileManager.default
         try? fileManager.removeItem(atPath: testDBPath)
     }
     
@@ -32,12 +25,6 @@ final class genieTests: XCTestCase {
         // Clean up test database
         let fileManager = FileManager.default
         try? fileManager.removeItem(atPath: testDBPath)
-        
-        // Restore original database
-        if fileManager.fileExists(atPath: originalDBPath + ".backup") {
-            try? fileManager.removeItem(atPath: originalDBPath)
-            try? fileManager.moveItem(atPath: originalDBPath + ".backup", toPath: originalDBPath)
-        }
     }
     
     // MARK: - Helper Methods
@@ -57,9 +44,13 @@ final class genieTests: XCTestCase {
     func runGenieCommand(_ arguments: [String]) -> (output: String, exitCode: Int32) {
         let genieBinary = productsDirectory.appendingPathComponent("genie")
         
+        // Add --db flag to use test database for all commands
+        var testArguments = ["--db", testDBPath!]
+        testArguments.append(contentsOf: arguments)
+
         let process = Process()
         process.executableURL = genieBinary
-        process.arguments = arguments
+        process.arguments = testArguments
         
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -262,9 +253,9 @@ final class genieTests: XCTestCase {
         let testPath2 = NSTemporaryDirectory() + "genie_test_files/testfile2.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath1, "tag2"])
-        runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath1, "tag2"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
         
         // Search for files with both tags
         let searchResult = runGenieCommand(["search", "tag1", "and", "tag2"])
@@ -279,8 +270,8 @@ final class genieTests: XCTestCase {
         let testPath2 = NSTemporaryDirectory() + "genie_test_files/testfile2.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
         
         // Search for files with either tag
         let searchResult = runGenieCommand(["search", "tag1", "or", "tag2"])
@@ -295,8 +286,8 @@ final class genieTests: XCTestCase {
         let testPath2 = NSTemporaryDirectory() + "genie_test_files/testfile2.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
         
         // Search for files with tag1 but not tag2
         let searchResult = runGenieCommand(["search", "tag1", "and", "not", "tag2"])
@@ -313,10 +304,10 @@ final class genieTests: XCTestCase {
         let testPath3 = NSTemporaryDirectory() + "genie_test_files/testfile3.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath2, "tag2"])
-        runGenieCommand(["tag", testPath3, "tag1"])
-        runGenieCommand(["tag", testPath3, "tag2"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath3, "tag1"])
+        _ = runGenieCommand(["tag", testPath3, "tag2"])
         
         // Search for files with exactly one of the tags
         let searchResult = runGenieCommand(["search", "tag1", "xor", "tag2"])
@@ -334,17 +325,17 @@ final class genieTests: XCTestCase {
         let testPath3 = NSTemporaryDirectory() + "genie_test_files/testfile3.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath1, "tag2"])
-        runGenieCommand(["tag", testPath2, "tag2"])
-        runGenieCommand(["tag", testPath2, "tag3"])
-        runGenieCommand(["tag", testPath3, "tag1"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath1, "tag2"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath2, "tag3"])
+        _ = runGenieCommand(["tag", testPath3, "tag1"])
         
         // Search for files with tag1 and (tag2 or tag3)
         let searchResult = runGenieCommand(["search", "tag1", "and", "(", "tag2", "or", "tag3", ")"])
-        XCTAssertTrue(searchResult.output.contains("testfile1.txt"))
-        XCTAssertTrue(searchResult.output.contains("testfile2.txt"))
-        XCTAssertFalse(searchResult.output.contains("testfile3.txt"))
+        XCTAssertTrue(searchResult.output.contains(testPath1))
+        XCTAssertFalse(searchResult.output.contains(testPath2))
+        XCTAssertFalse(searchResult.output.contains(testPath3))
     }
     
     func testSearchCommandSingleCharOperators() throws {
@@ -354,26 +345,26 @@ final class genieTests: XCTestCase {
         let testPath2 = NSTemporaryDirectory() + "genie_test_files/testfile2.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath1, "tag2"])
-        runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath1, "tag2"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
         
         // Test single char operators
         let andResult = runGenieCommand(["search", "tag1", "&", "tag2"])
-        XCTAssertTrue(andResult.output.contains("testfile1.txt"))
-        XCTAssertFalse(andResult.output.contains("testfile2.txt"))
+        XCTAssertTrue(andResult.output.contains(testPath1))
+        XCTAssertFalse(andResult.output.contains(testPath2))
         
         let orResult = runGenieCommand(["search", "tag1", "|", "tag2"])
-        XCTAssertTrue(orResult.output.contains("testfile1.txt"))
-        XCTAssertTrue(orResult.output.contains("testfile2.txt"))
+        XCTAssertTrue(orResult.output.contains(testPath1))
+        XCTAssertTrue(orResult.output.contains(testPath2))
         
         let notResult = runGenieCommand(["search", "tag1", "&", "!", "tag2"])
-        XCTAssertFalse(notResult.output.contains("testfile1.txt"))
-        XCTAssertFalse(notResult.output.contains("testfile2.txt"))
+        XCTAssertFalse(notResult.output.contains(testPath1))
+        XCTAssertFalse(notResult.output.contains(testPath2))
         
         let xorResult = runGenieCommand(["search", "tag1", "^", "tag2"])
-        XCTAssertTrue(xorResult.output.contains("testfile1.txt"))
-        XCTAssertTrue(xorResult.output.contains("testfile2.txt"))
+        XCTAssertFalse(xorResult.output.contains(testPath1))
+        XCTAssertTrue(xorResult.output.contains(testPath2))
     }
     
     func testSearchCommandJsonOutput() throws {
@@ -381,7 +372,7 @@ final class genieTests: XCTestCase {
         let testPath = NSTemporaryDirectory() + "genie_test_files/testfile.txt"
         
         // Tag the file
-        runGenieCommand(["tag", testPath, "testtag"])
+        _ = runGenieCommand(["tag", testPath, "testtag"])
         
         // Search with JSON output
         let searchResult = runGenieCommand(["-j", "search", "testtag"])
@@ -414,8 +405,8 @@ final class genieTests: XCTestCase {
         let testPath2 = NSTemporaryDirectory() + "genie_test_files/testfile2.txt"
         
         // Tag files
-        runGenieCommand(["tag", testPath1, "tag1"])
-        runGenieCommand(["tag", testPath2, "tag2"])
+        _ = runGenieCommand(["tag", testPath1, "tag1"])
+        _ = runGenieCommand(["tag", testPath2, "tag2"])
         
         // List all tags
         let listResult = runGenieCommand(["-l", "tag"])
@@ -434,9 +425,8 @@ final class genieTests: XCTestCase {
     // MARK: - Database Tests
     
     func testDatabaseCreation() throws {
-        // This test verifies that the database is created when it doesn't exist
         let fileManager = FileManager.default
-        let dbPath = NSHomeDirectory() + "/.geniedb"
+        let dbPath = testDBPath!
         
         // Remove existing database if it exists
         if fileManager.fileExists(atPath: dbPath) {
@@ -444,7 +434,7 @@ final class genieTests: XCTestCase {
         }
         
         // Run a simple command to trigger database creation
-        let result = runGenieCommand(["tag", "/tmp/testfile", "testtag"])
+        _ = runGenieCommand(["tag", "/tmp/testfile", "testtag"])
         
         // Verify database was created
         XCTAssertTrue(fileManager.fileExists(atPath: dbPath))
@@ -456,10 +446,10 @@ final class genieTests: XCTestCase {
         let testPath = NSTemporaryDirectory() + "genie_test_files/testfile.txt"
         
         // Tag a file to create the database
-        runGenieCommand(["tag", testPath, "testtag"])
+        _ = runGenieCommand(["tag", testPath, "testtag"])
         
         // Verify the database structure by checking if we can query it
-        let dbPath = NSHomeDirectory() + "/.geniedb"
+        let dbPath = testDBPath!
         let db = try Connection(dbPath)
         
         // Check if the genie table exists
@@ -496,9 +486,9 @@ final class genieTests: XCTestCase {
         let testPath = NSTemporaryDirectory() + "genie_test_files/testfile.txt"
         
         // Add multiple tags
-        runGenieCommand(["tag", testPath, "tag1"])
-        runGenieCommand(["tag", testPath, "tag2"])
-        runGenieCommand(["tag", testPath, "tag3"])
+        _ = runGenieCommand(["tag", testPath, "tag1"])
+        _ = runGenieCommand(["tag", testPath, "tag2"])
+        _ = runGenieCommand(["tag", testPath, "tag3"])
         
         // Print all tags
         let printResult = runGenieCommand(["print", testPath])
@@ -516,11 +506,11 @@ final class genieTests: XCTestCase {
         let testPath = NSTemporaryDirectory() + "genie_test_files/testfile.txt"
         
         // Add multiple tags
-        runGenieCommand(["tag", testPath, "tag1"])
-        runGenieCommand(["tag", testPath, "tag2"])
+        _ = runGenieCommand(["tag", testPath, "tag1"])
+        _ = runGenieCommand(["tag", testPath, "tag2"])
         
         // Remove one tag
-        runGenieCommand(["rm", testPath, "tag1"])
+        _ = runGenieCommand(["rm", testPath, "tag1"])
         
         // Verify only tag2 remains
         let printResult = runGenieCommand(["print", testPath])
@@ -539,7 +529,7 @@ final class genieTests: XCTestCase {
         // Tag all files
         for i in 1...10 {
             let testPath = NSTemporaryDirectory() + "genie_test_files/testfile\(i).txt"
-            runGenieCommand(["tag", testPath, "batchtag"])
+            _ = runGenieCommand(["tag", testPath, "batchtag"])
         }
         
         // Search for all tagged files
