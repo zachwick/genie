@@ -49,8 +49,17 @@ func printUsage() {
 
         EXAMPLES:
             genie search "tag1 and not tag2"     # Files with tag1 but not tag2
+            genie search "tag1 & !tag2"          # Same as above using single char operators
             genie search "tag1 and (tag2 or tag3)" # Files with tag1 and either tag2 or tag3
+            genie search "tag1 & (tag2 | tag3)"  # Same as above using single char operators
             genie search "tag1 xor tag2"         # Files with exactly one of tag1 or tag2
+            genie search "tag1 ^ tag2"           # Same as above using single char operators
+
+        OPERATORS:
+            AND: "and" or "&"
+            OR:  "or"  or "|"
+            NOT: "not" or "!"
+            XOR: "xor" or "^"
 
         SUBCOMMANDS:
             help       Prints this help message
@@ -344,7 +353,7 @@ class BooleanExpressionParser {
             } else if token == ")" {
                 currentIndex += 1
                 break
-            } else if token == "not" {
+            } else if token == "not" || token == "!" {
                 currentIndex += 1
                 if currentIndex < tokens.count {
                     if tokens[currentIndex] == "(" {
@@ -358,12 +367,12 @@ class BooleanExpressionParser {
                         expressions.append(.not(.tag(tag)))
                     }
                 }
-            } else if ["and", "or", "xor"].contains(token) {
+            } else if ["and", "or", "xor", "&", "|", "^"].contains(token) {
                 let op: BooleanOperator
                 switch token {
-                case "and": op = .and
-                case "or": op = .or
-                case "xor": op = .xor
+                case "and", "&": op = .and
+                case "or", "|": op = .or
+                case "xor", "^": op = .xor
                 default: op = .and
                 }
                 operators.append(op)

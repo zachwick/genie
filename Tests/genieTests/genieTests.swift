@@ -26,7 +26,9 @@ final class genieTests: XCTestCase {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8)
 
-        XCTAssertEqual(output, "")
+        // When run without arguments, genie should show an error message about not enough arguments
+        XCTAssertNotNil(output)
+        XCTAssertTrue(output?.contains("Error: Not enough arguments") == true)
     }
 
     /// Returns path to the built products directory.
