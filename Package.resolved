@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/stephencelis/SQLite.swift.git",
         "state": {
           "branch": null,
-          "revision": "a95fc6df17d108bd99210db5e8a9bac90fe984b8",
-          "version": "0.15.3"
+          "revision": "392dd6058624d9f6c5b4c769d165ddd8c7293394",
+          "version": "0.15.4"
         }
       },
       {
@@ -24,8 +24,17 @@
         "repositoryURL": "https://github.com/apple/swift-log.git",
         "state": {
           "branch": null,
-          "revision": "9cb486020ebf03bfa5b5df985387a14a98744537",
-          "version": "1.6.1"
+          "revision": "ce592ae52f982c847a4efc0dd881cc9eb32d29f2",
+          "version": "1.6.4"
+        }
+      },
+      {
+        "package": "swift-toolchain-sqlite",
+        "repositoryURL": "https://github.com/swiftlang/swift-toolchain-sqlite",
+        "state": {
+          "branch": null,
+          "revision": "b626d3002773b1a1304166643e7f118f724b2132",
+          "version": "1.0.4"
         }
       }
     ]

@@ -29,6 +29,7 @@ let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var db: Connection?
 var jsonOutput = false
 var tagList = false
+var processedArgs: [String] = []
 
 func printUsage() {
     let usageString =
@@ -46,10 +47,15 @@ func printUsage() {
             -j, --json       Gives output as json string for use in Alfred (only used by the 'search' subcommand)
             -l, --list       Prints out a listing of all tags used in genie (only used by the 'tag' subcommand)
 
+        EXAMPLES:
+            genie search "tag1 and not tag2"     # Files with tag1 but not tag2
+            genie search "tag1 and (tag2 or tag3)" # Files with tag1 and either tag2 or tag3
+            genie search "tag1 xor tag2"         # Files with exactly one of tag1 or tag2
+
         SUBCOMMANDS:
             help       Prints this help message
             rm         remove from the given PATH the given TAG
-            search (s) search for and return all PATHS that have all of the given TAGs
+            search (s) search for and return all PATHS using boolean expressions (e.g., "tag1 and not tag2", "tag1 and (tag2 or tag3)")
             print  (p) show all tags applied to the given PATH
             tag    (t) tag the given PATH with the given TAG
         """
@@ -57,7 +63,7 @@ func printUsage() {
 }
 
 func unknownCommand() {
-    print("Command \(CommandLine.arguments[1]) not found.")
+    print("Command \(processedArgs[1]) not found.")
     printUsage()
 }
 
@@ -123,9 +129,9 @@ func tagCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
-        if CommandLine.argc == 4 || (CommandLine.argc == 5 && (jsonOutput || tagList)) {
-            var pathToTag = CommandLine.arguments[2]
-            let tagToUse = CommandLine.arguments[3]
+        if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
+            var pathToTag = processedArgs[2]
+            let tagToUse = processedArgs[3]
             
             let dirURL = URL(fileURLWithPath: pathToTag)
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
@@ -158,7 +164,7 @@ func tagCommand() {
 func listTagsCommand() {
     // Fetch all distinct tags from the db and print them out
     if checkDB() {
-        if CommandLine.argc == 3 {
+        if processedArgs.count == 3 {
             let genieTable = Table("genie")
             let tag = Expression<String>("tag")
             let query = genieTable.select(distinct: tag)
@@ -175,9 +181,9 @@ func removeCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 5
-        if CommandLine.argc == 4 || (CommandLine.argc == 5 && (jsonOutput || tagList)) {
-            var pathToUntag = CommandLine.arguments[2]
-            let tagToRemove = CommandLine.arguments[3]
+        if processedArgs.count == 4 || (processedArgs.count == 5 && (jsonOutput || tagList)) {
+            var pathToUntag = processedArgs[2]
+            let tagToRemove = processedArgs[3]
             
             let dirURL = URL(fileURLWithPath: pathToUntag)
             let index = dirURL.absoluteString.index(dirURL.absoluteString.startIndex, offsetBy: 7)
@@ -200,40 +206,45 @@ func searchCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes either of
         //the --json or --list flags, then CommandLine.argc is at least 4
-        if CommandLine.argc >= 3 || (CommandLine.argc >= 4 && (jsonOutput || tagList)) {
-            let searchTags: Array<String> = Array(CommandLine.arguments[2..<CommandLine.arguments.count])
-            let genieTable = Table("genie")
-            let host = Expression<String?>("host")
-            let path = Expression<String?>("path")
-            let tag = Expression<String>("tag")
-            let query = genieTable.select(distinct: path, host).filter(searchTags.contains(tag))
-            var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
-            var items: [Dictionary<String, String>] = []
-
-            for item in try! db!.prepare(query) {
-                if jsonOutput {
-                    let pathValue = item[path] ?? ""
-                    let result: Dictionary<String, String> = [
-                        "title": pathValue,
-                        "subtitle": pathValue,
-                        "arg": pathValue,
-                        "autocomplete": pathValue,
-                        "quicklookurl": pathValue,
-                        "type": "file"
-                    ]
-                    items.append(result)
-                } else {
-                    print("\(item[host]): \(item[path])")
-                }
-            }
-            if jsonOutput {
-                let encoder = JSONEncoder()
-                outputArray["items"] = items
-                if let jsonData = try? encoder.encode(outputArray) {
-                    if let jsonString = String(data: jsonData, encoding: .utf8) {
-                        print(jsonString)
+        if processedArgs.count >= 3 || (processedArgs.count >= 4 && (jsonOutput || tagList)) {
+            let searchExpression = processedArgs[2..<processedArgs.count].joined(separator: " ")
+            
+            let parser = BooleanExpressionParser()
+            if let expression = parser.parse(searchExpression) {
+                let evaluator = BooleanExpressionEvaluator(db: db!)
+                let matchingPaths = evaluator.evaluate(expression)
+                
+                var outputArray: Dictionary<String, [Dictionary<String, String>]> = [:]
+                var items: [Dictionary<String, String>] = []
+                
+                for pathValue in matchingPaths {
+                    if jsonOutput {
+                        let result: Dictionary<String, String> = [
+                            "title": pathValue,
+                            "subtitle": pathValue,
+                            "arg": pathValue,
+                            "autocomplete": pathValue,
+                            "quicklookurl": pathValue,
+                            "type": "file"
+                        ]
+                        items.append(result)
+                    } else {
+                        print(pathValue)
                     }
                 }
+                
+                if jsonOutput {
+                    let encoder = JSONEncoder()
+                    outputArray["items"] = items
+                    if let jsonData = try? encoder.encode(outputArray) {
+                        if let jsonString = String(data: jsonData, encoding: .utf8) {
+                            print(jsonString)
+                        }
+                    }
+                }
+            } else {
+                print("Error: Invalid boolean expression")
+                printUsage()
             }
         } else {
             print("Error: Not enough arguments\n")
@@ -246,8 +257,8 @@ func printCommand() {
     if checkDB() {
         // The second part of this if clause is because if the user passes the --json
         // flag (which is ignored by this command), then CommandLine.argc is 4
-        if CommandLine.argc == 3 || (CommandLine.argc == 4 && (jsonOutput || tagList)) {
-            var searchPath = CommandLine.arguments[2]
+        if processedArgs.count == 3 || (processedArgs.count == 4 && (jsonOutput || tagList)) {
+            var searchPath = processedArgs[2]
             let genieTable = Table("genie")
             
             let dirURL = URL(fileURLWithPath: searchPath)
@@ -267,33 +278,207 @@ func printCommand() {
     }
 }
 
-if CommandLine.arguments.contains("-j") || CommandLine.arguments.contains("--json") {
+// Boolean expression structures
+enum BooleanOperator {
+    case and, or, not, xor
+}
+
+enum BooleanExpression {
+    case tag(String)
+    case operation(BooleanOperator, [BooleanExpression])
+    indirect case not(BooleanExpression)
+}
+
+class BooleanExpressionParser {
+    private var tokens: [String] = []
+    private var currentIndex = 0
+    
+    func parse(_ expression: String) -> BooleanExpression? {
+        // Tokenize the expression
+        tokens = tokenize(expression)
+        currentIndex = 0
+        
+        return parseExpression()
+    }
+    
+    private func tokenize(_ expression: String) -> [String] {
+        var tokens: [String] = []
+        var current = ""
+        
+        for char in expression {
+            if char.isWhitespace {
+                if !current.isEmpty {
+                    tokens.append(current)
+                    current = ""
+                }
+            } else if char == "(" || char == ")" {
+                if !current.isEmpty {
+                    tokens.append(current)
+                    current = ""
+                }
+                tokens.append(String(char))
+            } else {
+                current.append(char)
+            }
+        }
+        
+        if !current.isEmpty {
+            tokens.append(current)
+        }
+        
+        return tokens
+    }
+    
+    private func parseExpression() -> BooleanExpression? {
+        var expressions: [BooleanExpression] = []
+        var operators: [BooleanOperator] = []
+        
+        while currentIndex < tokens.count {
+            let token = tokens[currentIndex]
+            
+            if token == "(" {
+                currentIndex += 1
+                if let subExpr = parseExpression() {
+                    expressions.append(subExpr)
+                }
+            } else if token == ")" {
+                currentIndex += 1
+                break
+            } else if token == "not" {
+                currentIndex += 1
+                if currentIndex < tokens.count {
+                    if tokens[currentIndex] == "(" {
+                        currentIndex += 1
+                        if let subExpr = parseExpression() {
+                            expressions.append(.not(subExpr))
+                        }
+                    } else {
+                        let tag = tokens[currentIndex]
+                        currentIndex += 1
+                        expressions.append(.not(.tag(tag)))
+                    }
+                }
+            } else if ["and", "or", "xor"].contains(token) {
+                let op: BooleanOperator
+                switch token {
+                case "and": op = .and
+                case "or": op = .or
+                case "xor": op = .xor
+                default: op = .and
+                }
+                operators.append(op)
+                currentIndex += 1
+            } else {
+                // Assume it's a tag
+                expressions.append(.tag(token))
+                currentIndex += 1
+            }
+        }
+        
+        // Evaluate expressions with operators
+        if expressions.isEmpty {
+            return nil
+        }
+        
+        var result = expressions[0]
+        for i in 0..<operators.count {
+            if i + 1 < expressions.count {
+                result = .operation(operators[i], [result, expressions[i + 1]])
+            }
+        }
+        
+        return result
+    }
+}
+
+class BooleanExpressionEvaluator {
+    private let db: Connection
+    private let genieTable: Table
+    
+    init(db: Connection) {
+        self.db = db
+        self.genieTable = Table("genie")
+    }
+    
+    func evaluate(_ expression: BooleanExpression) -> Set<String> {
+        switch expression {
+        case .tag(let tag):
+            return getPathsWithTag(tag)
+        case .operation(let op, let expressions):
+            switch op {
+            case .and:
+                guard expressions.count == 2 else { return [] }
+                let left = evaluate(expressions[0])
+                let right = evaluate(expressions[1])
+                return left.intersection(right)
+            case .or:
+                guard expressions.count == 2 else { return [] }
+                let left = evaluate(expressions[0])
+                let right = evaluate(expressions[1])
+                return left.union(right)
+            case .xor:
+                guard expressions.count == 2 else { return [] }
+                let left = evaluate(expressions[0])
+                let right = evaluate(expressions[1])
+                return left.symmetricDifference(right)
+            case .not:
+                return []
+            }
+        case .not(let expr):
+            let pathsWithExpr = evaluate(expr)
+            let allPaths = getAllPaths()
+            return allPaths.subtracting(pathsWithExpr)
+        }
+    }
+    
+    private func getPathsWithTag(_ tag: String) -> Set<String> {
+        let path = Expression<String?>("path")
+        let tagExpr = Expression<String>("tag")
+        let query = genieTable.select(distinct: path).filter(tagExpr == tag)
+        
+        var paths: Set<String> = []
+        for item in try! db.prepare(query) {
+            if let pathValue = item[path] {
+                paths.insert(pathValue)
+            }
+        }
+        return paths
+    }
+    
+    private func getAllPaths() -> Set<String> {
+        let path = Expression<String?>("path")
+        let query = genieTable.select(distinct: path)
+        
+        var paths: Set<String> = []
+        for item in try! db.prepare(query) {
+            if let pathValue = item[path] {
+                paths.insert(pathValue)
+            }
+        }
+        return paths
+    }
+}
+
+// Process command line arguments without modifying CommandLine.arguments
+processedArgs = CommandLine.arguments
+
+if processedArgs.contains("-j") || processedArgs.contains("--json") {
     jsonOutput = true
-    if let index = CommandLine.arguments.firstIndex(of: "-j") {
-        CommandLine.arguments.remove(at: index)
-    }
-    if let index = CommandLine.arguments.firstIndex(of: "--json") {
-        CommandLine.arguments.remove(at: index)
-    }
+    processedArgs = processedArgs.filter { $0 != "-j" && $0 != "--json" }
 }
 
-if CommandLine.arguments.contains("-l") || CommandLine.arguments.contains("--list") {
+if processedArgs.contains("-l") || processedArgs.contains("--list") {
     tagList = true
-    if let index = CommandLine.arguments.firstIndex(of: "-l") {
-        CommandLine.arguments.remove(at: index)
-    }
-    if let index = CommandLine.arguments.firstIndex(of: "--list") {
-        CommandLine.arguments.remove(at: index)
-    }
+    processedArgs = processedArgs.filter { $0 != "-l" && $0 != "--list" }
 }
 
-if CommandLine.argc == 1  || (CommandLine.argc == 2 && jsonOutput) {
+if processedArgs.count == 1 || (processedArgs.count == 2 && jsonOutput) {
     print("Error: Not enough arguments\n")
     printUsage()
 }
 
-if CommandLine.argc > 1 {
-    switch CommandLine.arguments[1] {
+if processedArgs.count > 1 {
+    switch processedArgs[1] {
     case "-h",
         "--help":
         printUsage()
