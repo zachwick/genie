@@ -31,6 +31,12 @@ var jsonOutput = false
 var tagList = false
 var processedArgs: [String] = []
 
+// Exit codes
+let EXIT_SUCCESS: Int32 = 0
+let EXIT_USAGE_ERROR: Int32 = 1
+let EXIT_DATABASE_ERROR: Int32 = 2
+let EXIT_INVALID_EXPRESSION: Int32 = 3
+
 func printUsage() {
     let usageString =
         """
@@ -74,6 +80,7 @@ func printUsage() {
 func unknownCommand() {
     print("Command \(processedArgs[1]) not found.")
     printUsage()
+    Foundation.exit(EXIT_USAGE_ERROR)
 }
 
 func checkDB() -> Bool  {
@@ -166,7 +173,10 @@ func tagCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
+            Foundation.exit(EXIT_USAGE_ERROR)
         }
+    } else {
+        Foundation.exit(EXIT_DATABASE_ERROR)
     }
 }
 
@@ -183,6 +193,8 @@ func listTagsCommand() {
             }
 
         }
+    } else {
+        Foundation.exit(EXIT_DATABASE_ERROR)
     }
 }
 
@@ -207,7 +219,10 @@ func removeCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
+            Foundation.exit(EXIT_USAGE_ERROR)
         }
+    } else {
+        Foundation.exit(EXIT_DATABASE_ERROR)
     }
 }
 
@@ -254,11 +269,15 @@ func searchCommand() {
             } else {
                 print("Error: Invalid boolean expression")
                 printUsage()
+                Foundation.exit(EXIT_INVALID_EXPRESSION)
             }
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
+            Foundation.exit(EXIT_USAGE_ERROR)
         }
+    } else {
+        Foundation.exit(EXIT_DATABASE_ERROR)
     }
 }
 
@@ -283,7 +302,10 @@ func printCommand() {
         } else {
             print("Error: Not enough arguments\n")
             printUsage()
+            Foundation.exit(EXIT_USAGE_ERROR)
         }
+    } else {
+        Foundation.exit(EXIT_DATABASE_ERROR)
     }
 }
 
@@ -484,6 +506,7 @@ if processedArgs.contains("-l") || processedArgs.contains("--list") {
 if processedArgs.count == 1 || (processedArgs.count == 2 && jsonOutput) {
     print("Error: Not enough arguments\n")
     printUsage()
+    Foundation.exit(EXIT_USAGE_ERROR)
 }
 
 if processedArgs.count > 1 {
