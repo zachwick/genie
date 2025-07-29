@@ -342,7 +342,7 @@ class BooleanExpressionParser {
                     tokens.append(current)
                     current = ""
                 }
-            } else if char == "(" || char == ")" {
+            } else if char == "(" || char == ")" || char == "&" || char == "|" || char == "^" || char == "!" {
                 if !current.isEmpty {
                     tokens.append(current)
                     current = ""
