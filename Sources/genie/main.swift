@@ -29,6 +29,7 @@ let commandName = (CommandLine.arguments[0] as NSString).lastPathComponent
 var db: Connection?
 var jsonOutput = false
 var tagList = false
+var customDbPath: String?
 var processedArgs: [String] = []
 
 // Exit codes
@@ -36,6 +37,10 @@ let EXIT_SUCCESS: Int32 = 0
 let EXIT_USAGE_ERROR: Int32 = 1
 let EXIT_DATABASE_ERROR: Int32 = 2
 let EXIT_INVALID_EXPRESSION: Int32 = 3
+
+func getDatabasePath() -> String {
+    return customDbPath ?? databaseFilePath
+}
 
 func printUsage() {
     let usageString =
@@ -52,6 +57,7 @@ func printUsage() {
             -v, --version    Prints version information
             -j, --json       Gives output as json string for use in Alfred (only used by the 'search' subcommand)
             -l, --list       Prints out a listing of all tags used in genie (only used by the 'tag' subcommand)
+            --db PATH        Specify a custom database file path (useful for testing)
 
         EXAMPLES:
             genie search "tag1 and not tag2"     # Files with tag1 but not tag2
@@ -85,10 +91,10 @@ func unknownCommand() {
 
 func checkDB() -> Bool  {
     let fileManager = FileManager.default
-    if fileManager.fileExists(atPath: databaseFilePath) {
+    if fileManager.fileExists(atPath: getDatabasePath()) {
         // Open existing database and check if the genie table exists
         do {
-            db = try Connection(databaseFilePath)
+            db = try Connection(getDatabasePath())
             
             // Check if the genie table exists
             let tableExists = try db!.scalar("SELECT name FROM sqlite_master WHERE type='table' AND name='genie'") != nil
@@ -112,13 +118,13 @@ func checkDB() -> Bool  {
             }
             return true
         } catch {
-            print("Error: Unable to open existing database at \(databaseFilePath): \(error)")
+            print("Error: Unable to open existing database at \(getDatabasePath()): \(error)")
             return false
         }
     } else {
         // Create the SQLite db and structure it correctly
         do {
-            db = try Connection(databaseFilePath)
+            db = try Connection(getDatabasePath())
             let genieTable = Table("genie")
             let id = Expression<Int64>("id")
             let host = Expression<String>("host")
@@ -135,7 +141,7 @@ func checkDB() -> Bool  {
             })
             return true
         } catch {
-            print("Error: Unable to create database at \(databaseFilePath): \(error)")
+            print("Error: Unable to create database at \(getDatabasePath()): \(error)")
             return false
         }
     }
@@ -501,6 +507,19 @@ if processedArgs.contains("-j") || processedArgs.contains("--json") {
 if processedArgs.contains("-l") || processedArgs.contains("--list") {
     tagList = true
     processedArgs = processedArgs.filter { $0 != "-l" && $0 != "--list" }
+}
+
+// Process --db flag
+if let dbIndex = processedArgs.firstIndex(of: "--db") {
+    if dbIndex + 1 < processedArgs.count {
+        customDbPath = processedArgs[dbIndex + 1]
+        // Remove both --db and its value from processedArgs
+        processedArgs.remove(at: dbIndex + 1)
+        processedArgs.remove(at: dbIndex)
+    } else {
+        print("Error: --db flag requires a path argument")
+        Foundation.exit(EXIT_USAGE_ERROR)
+    }
 }
 
 if processedArgs.count == 1 || (processedArgs.count == 2 && jsonOutput) {
