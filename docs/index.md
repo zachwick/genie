@@ -31,9 +31,113 @@ Use `genie --help` to see usage instructions
 | -- | -- | -- |
 | `help` | n/a | Prints this help message |
 | `rm [PATH] [TAG]` | n/a | remove from the given `PATH` the given `TAG` |
-| `search [TAGLIST] [FLAG]` | `s` | search for and return all paths that have _all_ of the tags given in `TAGLIST` |
+| `search [EXPRESSION] [FLAG]` | `s` | search for and return all paths using boolean expressions (e.g., "tag1 and not tag2", "tag1 and (tag2 or tag3)") |
 | `print [PATH]` | `p` | show all tags applied to the given `PATH` |
 | `tag [PATH] [TAG] [FLAG]` | `t` | tag the given `PATH` with the given `TAG`, or print a list of all tags used. |
+
+## Search with Boolean Operators
+
+The `search` command supports powerful boolean expressions for finding files with specific tag combinations. You can use both word-based and single-character operators.
+
+### Supported Operators
+
+| Operator | Word-based | Single-character | Description |
+|----------|------------|------------------|-------------|
+| AND | `and` | `&` | Files that have ALL specified tags |
+| OR | `or` | `|` | Files that have ANY of the specified tags |
+| NOT | `not` | `!` | Files that do NOT have the specified tag |
+| XOR | `xor` | `^` | Files that have exactly ONE of the specified tags (not both) |
+
+### Search Examples
+
+#### Basic Tag Search
+```bash
+# Find all files tagged with "work"
+genie search work
+
+# Find all files tagged with "important"
+genie search important
+```
+
+#### AND Operator
+```bash
+# Find files with both "work" and "urgent" tags
+genie search "work and urgent"
+genie search "work & urgent"
+
+# Find files with "project" tag but not "archived"
+genie search "project and not archived"
+genie search "project & !archived"
+```
+
+#### OR Operator
+```bash
+# Find files with either "work" or "personal" tags
+genie search "work or personal"
+genie search "work | personal"
+
+# Find files with "urgent" or "important" tags
+genie search "urgent or important"
+genie search "urgent | important"
+```
+
+#### NOT Operator
+```bash
+# Find files with "work" tag but not "archived"
+genie search "work and not archived"
+genie search "work & !archived"
+
+# Find all files except those tagged "archived"
+genie search "not archived"
+genie search "!archived"
+```
+
+#### XOR Operator
+```bash
+# Find files with exactly one of "work" or "personal" (not both)
+genie search "work xor personal"
+genie search "work ^ personal"
+```
+
+#### Complex Expressions with Parentheses
+```bash
+# Find files with "work" tag AND either "urgent" or "important"
+genie search "work and (urgent or important)"
+genie search "work & (urgent | important)"
+
+# Find files with "project" tag AND (either "frontend" or "backend") AND NOT "archived"
+genie search "project and (frontend or backend) and not archived"
+genie search "project & (frontend | backend) & !archived"
+
+# Find files with either "urgent" or "important" but not "archived"
+genie search "(urgent or important) and not archived"
+genie search "(urgent | important) & !archived"
+```
+
+#### Mixed Operator Types
+```bash
+# Combine word-based and single-character operators
+genie search "work & urgent | important"
+genie search "project and (frontend | backend) & !archived"
+```
+
+### Tips for Boolean Search
+
+1. **Use quotes** around expressions with spaces to avoid shell interpretation issues
+2. **Parentheses** help group complex expressions for clarity
+3. **Single-character operators** (`&`, `|`, `!`, `^`) are more concise for simple expressions
+4. **Word-based operators** (`and`, `or`, `not`, `xor`) are more readable for complex expressions
+5. **NOT operator** works best when combined with other operators using AND
+
+### JSON Output
+
+For use with Alfred or other tools, you can get JSON output:
+
+```bash
+# Get JSON output for Alfred workflow
+genie search -j "work and urgent"
+genie search --json "work & urgent"
+```
 
 ## Alfred Usage
 
